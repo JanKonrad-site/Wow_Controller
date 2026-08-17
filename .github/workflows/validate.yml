@@ -1,0 +1,31 @@
+name: Validate Vanilla addon
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install validators
+        run: sudo apt-get update && sudo apt-get install -y lua5.1 libxml2-utils
+
+      - name: Check Lua syntax
+        run: luac5.1 -p Core.lua Bindings.lua UI.lua Loot.lua Help.lua
+
+      - name: Check bindings XML
+        run: xmllint --noout Bindings.xml
+
+      - name: Check OctoLauncher layout
+        run: |
+          test -f Wow_Controller.toc
+          while IFS= read -r file; do
+            case "$file" in
+              ""|'##'*) continue ;;
+            esac
+            test -f "$file" || { echo "Missing TOC file: $file"; exit 1; }
+          done < Wow_Controller.toc

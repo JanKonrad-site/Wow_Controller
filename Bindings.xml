@@ -1,0 +1,8 @@
+<Bindings>
+  <Binding name="OCTOPORT_TOGGLEBAGS" header="OCTOPORT" runOnUp="true">
+    if (keystate == "down") then OctoPort_ToggleBags() end
+  </Binding>
+  <Binding name="OCTOPORT_TOGGLEHELP" runOnUp="true">
+    if (keystate == "down") then OctoPort_ToggleHelp() end
+  </Binding>
+</Bindings>

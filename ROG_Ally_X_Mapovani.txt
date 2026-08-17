@@ -1,0 +1,42 @@
+WOW CONTROLLER 0.1.0 - ROG ALLY X / ARMOURY CRATE SE
+================================================
+
+1. Pridej skutecny WoW.exe do Game Library v Armoury Crate SE.
+2. V Command Centeru nech Control Mode = Auto.
+3. Otevri Game Profile hry a uprav Desktop Mode.
+4. U M1 a M2 vypni "Set as Secondary Function".
+
+MAPOVANI
+--------
+Leva packa        W / A / S / D       Pohyb
+Prava packa       Mouse                Kurzor / kamera
+A                 1                    Akce A
+B                 2                    Akce B
+X                 3                    Akce X
+Y                 4                    Akce Y
+D-pad nahoru      5                    Akce nahoru
+D-pad doprava     6                    Akce doprava
+D-pad dolu        7                    Akce dolu
+D-pad doleva      8                    Akce doleva
+LB                Shift                Vrstva LB
+LT                Ctrl                 Vrstva LT
+RB                Levy klik            Vyber v UI
+RT                Pravy klik           Otaceni kamery / interakce
+L3                Tab                  Dalsi nepritel
+LB + L3           Shift + Tab          Predchozi nepritel
+LT + L3           Ctrl + Tab           Nejblizsi spojenec
+R3                Space                Skok
+View              M                    Mapa
+Menu              Escape               Zpet / menu
+M1                F                    Interakce s cilem
+M2                R                    Vsechny batohy
+
+VE HRE
+------
+/octoport setup     ulozi puvodni klavesy a nastavi WOW Controller
+/octoport edit      zobrazi vsechny tri listy pro pretahovani schopnosti
+/octoport restore   vrati puvodni klavesy
+/octoport            otevre napovedu
+
+Poznamka: OctoWoW 1.12.2 nema nativni XInput. Desktop Mode proto prevadi
+ovladac na klavesnici a mys; WOW Controller z toho uvnitr hry dela konzolove UI.

@@ -1,0 +1,35 @@
+name: Release addon ZIP
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate addon root
+        run: |
+          test -f Wow_Controller.toc
+          test -f Core.lua
+          test -f UI.lua
+          test -f Loot.lua
+
+      - name: Build ZIP
+        run: |
+          mkdir -p package/Wow_Controller
+          rsync -av --exclude='.git*' --exclude='package' --exclude='*.zip' ./ package/Wow_Controller/
+          cd package
+          zip -r "../Wow_Controller-${GITHUB_REF_NAME}.zip" Wow_Controller
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" "Wow_Controller-${GITHUB_REF_NAME}.zip" --generate-notes

@@ -1,0 +1,12 @@
+## Interface: 11200
+## Title: |cff3dd6d0WOW|cffffffff Controller
+## Author: Jan Konrad / OpenAI
+## Notes: Console-style controller UI for OctoWoW 1.12.2 and ROG Ally X
+## Version: 0.1.0
+## SavedVariablesPerCharacter: OctoPortConfig
+
+Core.lua
+Bindings.lua
+UI.lua
+Loot.lua
+Help.lua
