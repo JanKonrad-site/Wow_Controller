@@ -1,6 +1,6 @@
 # WOW Controller
 
-Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. Version 0.3 adds an in-game setup and diagnostics workflow inspired by the strong controller UX principles of ConsolePort while remaining an independent Vanilla implementation.
+Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. Version 0.4 adds stick movement setup, a visible targeting reticle and configurable rear-paddle actions to the in-game workflow inspired by the strong controller UX principles of ConsolePort while remaining an independent Vanilla implementation.
 
 OctoWoW's 1.12 client has no native XInput support. Armoury Crate SE converts the physical controller to keyboard/mouse signals; WOW Controller now captures those real signals inside WoW instead of assuming fixed F-keys.
 
@@ -11,16 +11,19 @@ There is no combat rotation, botting, injected DLL or unattended combat. Every c
 1. Open **OctoLauncher** and choose **Addons**.
 2. Add the custom git addon `https://github.com/JanKonrad-site/Wow_Controller.git`.
 3. Install or update it, then launch OctoWoW.
-4. In game type `/wc` and choose **SPUSTIT PRUVODCE**.
-5. Press the requested physical controller button at every step, then verify all green signals in **DIAGNOSTIKA**.
+4. In ROG Command Center select **Desktop Mode** for OctoWoW. Do not leave it on Auto/Gamepad Mode.
+5. In game type `/wc` and choose **SPUSTIT PRUVODCE**.
+6. Move or press the requested physical control at every step, then verify all green signals in **DIAGNOSTIKA**.
 
 The repository name must remain `Wow_Controller`: OctoLauncher clones it directly to `Interface/AddOns/Wow_Controller` and expects `Wow_Controller.toc` in the repository root.
 
 ## First controller setup
 
-The wizard captures A, B, X, Y, all four D-pad directions, Menu, LB and LT. Enter, Escape, arrow keys, F-keys, ordinary keys and mouse buttons are supported.
+The wizard first captures all four left-stick directions, then A, B, X, Y, all four D-pad directions and Menu. View, LB, LT, rear M1 and rear M2 are optional steps. Enter, Escape, arrow keys, F-keys, ordinary keys and mouse buttons are supported. The right stick remains a mouse and has its own live movement test in Diagnostics.
 
-If the wizard does not advance when you press a control, that button is not sending a keyboard/mouse signal to WoW. Assign any unused key to it in the game's Armoury Crate Desktop Mode profile, return to WoW and press it again. For mouse-button capture, point the cursor at the capture window.
+If the wizard does not advance when you press a control, that button is not sending a keyboard/mouse signal to WoW. Assign any unused key to it in the game's Armoury Crate Desktop Mode profile, return to WoW and press it again. For mouse-button capture, point the cursor at the capture window. Auto mode can select Gamepad Mode, which the old 1.12 client cannot consume as XInput.
+
+For M1/M2, clear **Set as Secondary Function** in Armoury Crate before assigning an unused keyboard key to each paddle. The physical Command Center and Armoury Crate buttons are system-reserved and cannot be remapped; use View for WOW Controller settings instead.
 
 Recommended device-side controls that do not need the wizard:
 
@@ -31,11 +34,11 @@ Recommended device-side controls that do not need the wizard:
 | RB | Left mouse button | UI click |
 | RT | Right mouse button | Camera and world interaction |
 | R3 | Space | Jump |
-| View | Escape | Emergency close/back |
-| M1 | F | Interact |
-| M2 | R | Bags |
+| View | Any unused key | WOW Controller settings |
+| M1 | Any unused key | Configurable; default settings |
+| M2 | Any unused key | Configurable; default interact |
 
-The old ABXY F9-F12, D-pad arrows and Menu F8 profile remains available through **F8-F12 PRESET** or `/octoport preset`, but the capture wizard is the recommended setup.
+The old ABXY F9-F12, D-pad arrows and Menu F8 profile remains available through **ROG ALLY PRESET** or `/octoport preset`, but the capture wizard is the recommended setup.
 
 ## Controller menu
 
@@ -43,14 +46,16 @@ Open it with `/wc`, `/octoport` or the **WC** button on the controller HUD.
 
 - **SETUP** — full wizard, legacy preset and binding restore.
 - **OVLADANI** — view or remap every controller action separately.
-- **HRANI** — auto target, auto quest, HUD, bar editor, HUD position/scale and radial settings.
-- **DIAGNOSTIKA** — live green signal for every mapped controller input.
+- **HRANI** — auto target, auto quest, reticle, configurable M1/M2 actions, HUD, bar editor and radial settings.
+- **DIAGNOSTIKA** — live green signal for every mapped input plus right-stick mouse movement.
 
 Inside the menu, D-pad left/right changes tabs, up/down moves focus, A activates and B closes.
 
 ## Default behavior
 
 - D-pad Up/Down cycles friendly targets; Left/Right cycles enemy targets.
+- Left stick drives forward/backward movement and strafing after the wizard maps its four Desktop Mode signals.
+- The center reticle is cyan without a target, red for enemies and green for friendly targets; it also shows target health.
 - A confirms visible dialogs or uses face action 1. B closes/cancels or uses face action 2. X/Y use face actions 3/4.
 - LB and LT select the second and third four-action layers. They can be native Shift/Ctrl or ordinary mapped keys.
 - Tap Menu for the game menu. Hold Menu for the eight-slot radial utility wheel.
@@ -72,6 +77,7 @@ Inside the menu, D-pad left/right changes tabs, up/down moves focus, A activates
 - `/octoport wheel` — edit the radial menu.
 - `/octoport target on|off` — toggle automatic targeting.
 - `/octoport quest on|off` — toggle quest acceptance.
+- `/octoport reticle on|off` — show or hide the center reticle.
 - `/octoport mount NAME` — set the radial mount spell or bag item.
 
 ## Login credentials

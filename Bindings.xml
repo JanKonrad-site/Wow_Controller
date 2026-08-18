@@ -1,5 +1,17 @@
 <Bindings>
-  <Binding name="OCTOPORT_ACTION_A" header="OCTOPORT" runOnUp="true">
+  <Binding name="OCTOPORT_MOVE_FORWARD" runOnUp="true" header="OCTOPORT">
+    OctoPort_Move("forward", keystate)
+  </Binding>
+  <Binding name="OCTOPORT_MOVE_BACKWARD" runOnUp="true">
+    OctoPort_Move("backward", keystate)
+  </Binding>
+  <Binding name="OCTOPORT_MOVE_LEFT" runOnUp="true">
+    OctoPort_Move("left", keystate)
+  </Binding>
+  <Binding name="OCTOPORT_MOVE_RIGHT" runOnUp="true">
+    OctoPort_Move("right", keystate)
+  </Binding>
+  <Binding name="OCTOPORT_ACTION_A" runOnUp="true">
     OctoPort_ActionKey(1, keystate)
   </Binding>
   <Binding name="OCTOPORT_ACTION_B" runOnUp="true">
@@ -34,6 +46,12 @@
   </Binding>
   <Binding name="OCTOPORT_OPENCONFIG">
     OctoPort_OpenConfig()
+  </Binding>
+  <Binding name="OCTOPORT_REAR_M1" runOnUp="true">
+    OctoPort_RearKey("M1", keystate)
+  </Binding>
+  <Binding name="OCTOPORT_REAR_M2" runOnUp="true">
+    OctoPort_RearKey("M2", keystate)
   </Binding>
   <Binding name="OCTOPORT_TOGGLEBAGS">
     OctoPort_ToggleBags()

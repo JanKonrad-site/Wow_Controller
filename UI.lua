@@ -405,6 +405,7 @@ end
 function OctoPort:TargetChanged(direction)
   self.targetFlashDirection = direction
   self.targetFlashUntil = GetTime() + 0.30
+  if self.PulseReticle then self:PulseReticle() end
   self:UpdateTargetDisplay()
 end
 
@@ -548,6 +549,7 @@ end
 function OctoPort:InitializeUI()
   self:InstallActionSlotHook()
   self:CreateRoot()
+  if self.CreateReticle then self:CreateReticle() end
   self:ApplyLayout()
   self:SetUIEnabled(self.config.enabled)
 

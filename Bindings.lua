@@ -3,6 +3,10 @@
 -- signal that the handheld actually sends instead of guessing a device preset.
 
 local bindingDefinitions = {
+  { id = "LSUP",   label = "L-Stick Up",   command = "OCTOPORT_MOVE_FORWARD",  defaultKey = "W",     required = true },
+  { id = "LSDOWN", label = "L-Stick Down", command = "OCTOPORT_MOVE_BACKWARD", defaultKey = "S",     required = true },
+  { id = "LSLEFT", label = "L-Stick Left", command = "OCTOPORT_MOVE_LEFT",     defaultKey = "A",     required = true },
+  { id = "LSRIGHT", label = "L-Stick Right", command = "OCTOPORT_MOVE_RIGHT", defaultKey = "D",     required = true },
   { id = "A",      label = "A",           command = "OCTOPORT_ACTION_A",     defaultKey = "F9",    required = true },
   { id = "B",      label = "B",           command = "OCTOPORT_ACTION_B",     defaultKey = "F10",   required = true },
   { id = "X",      label = "X",           command = "OCTOPORT_ACTION_X",     defaultKey = "F11",   required = true },
@@ -14,6 +18,9 @@ local bindingDefinitions = {
   { id = "MENU",   label = "Menu",        command = "OCTOPORT_RADIAL",       defaultKey = "F8",    required = true },
   { id = "LB",     label = "LB layer",    command = "OCTOPORT_LAYER_LB",     nativeKey = "SHIFT", layer = "shift" },
   { id = "LT",     label = "LT layer",    command = "OCTOPORT_LAYER_LT",     nativeKey = "CTRL",  layer = "ctrl" },
+  { id = "VIEW",   label = "View / Settings", command = "OCTOPORT_OPENCONFIG" },
+  { id = "M1",     label = "Rear M1",     command = "OCTOPORT_REAR_M1" },
+  { id = "M2",     label = "Rear M2",     command = "OCTOPORT_REAR_M2" },
 }
 
 OctoPort.bindingDefinitions = bindingDefinitions
@@ -29,6 +36,22 @@ local extraPresetBindings = {
   { "NUMLOCK", "TOGGLEAUTORUN" },
   { "ESCAPE", "TOGGLEGAMEMENU" },
 }
+
+local rearActionOrder = { "settings", "interact", "jump", "autorun", "bags", "map", "target", "reticle", "radial" }
+local rearActionLabels = {
+  settings = "Settings",
+  interact = "Interact",
+  jump = "Jump",
+  autorun = "Auto run",
+  bags = "Bags",
+  map = "Map",
+  target = "Next enemy",
+  reticle = "Reticle",
+  radial = "Radial wheel",
+}
+
+OctoPort.rearActionOrder = rearActionOrder
+OctoPort.rearActionLabels = rearActionLabels
 
 local function CurrentBinding(key)
   if GetBindingAction then return GetBindingAction(key) or "" end
@@ -108,7 +131,7 @@ function OctoPort:RefreshSetupState()
     end
   end
   self.config.setupComplete = complete
-  if complete then self.config.bindingVersion = 3 end
+  if complete then self.config.bindingVersion = 4 end
   if self.RefreshBindingMenu then self:RefreshBindingMenu() end
   return complete
 end
@@ -200,6 +223,94 @@ function OctoPort:SignalInput(id, state)
   if self.UpdateInputDiagnostics then self:UpdateInputDiagnostics() end
 end
 
+function OctoPort_Move(direction, keystate)
+  if not OctoPort then return end
+  local ids = { forward = "LSUP", backward = "LSDOWN", left = "LSLEFT", right = "LSRIGHT" }
+  OctoPort:SignalInput(ids[direction], keystate)
+  if OctoPort.bindingCaptureActive then return end
+
+  local startFunctions = {
+    forward = MoveForwardStart,
+    backward = MoveBackwardStart,
+    left = StrafeLeftStart,
+    right = StrafeRightStart,
+  }
+  local stopFunctions = {
+    forward = MoveForwardStop,
+    backward = MoveBackwardStop,
+    left = StrafeLeftStop,
+    right = StrafeRightStop,
+  }
+
+  if keystate ~= "down" then
+    if stopFunctions[direction] then stopFunctions[direction]() end
+    return
+  end
+
+  local menuDirection = { forward = "up", backward = "down", left = "left", right = "right" }
+  if OctoPort.HandleRadialDirection and OctoPort:HandleRadialDirection(menuDirection[direction]) then return end
+  if OctoPort.HandleConfigDirection and OctoPort:HandleConfigDirection(menuDirection[direction]) then return end
+  if startFunctions[direction] then startFunctions[direction]() end
+end
+
+function OctoPort:GetRearActionLabel(button)
+  local action = self.config and self.config.rearActions and self.config.rearActions[button] or "settings"
+  return rearActionLabels[action] or action
+end
+
+function OctoPort:CycleRearAction(button)
+  self.config.rearActions = self.config.rearActions or { M1 = "settings", M2 = "interact" }
+  local current = self.config.rearActions[button]
+  local position = 1
+  for index = 1, table.getn(rearActionOrder) do
+    if rearActionOrder[index] == current then position = index end
+  end
+  position = position + 1
+  if position > table.getn(rearActionOrder) then position = 1 end
+  self.config.rearActions[button] = rearActionOrder[position]
+  if self.RefreshRearActionButtons then self:RefreshRearActionButtons() end
+end
+
+function OctoPort:HandleRearAction(button, keystate)
+  local action = self.config and self.config.rearActions and self.config.rearActions[button]
+  if not action then action = button == "M1" and "settings" or "interact" end
+
+  if action == "interact" then
+    if keystate == "down" then TurnOrActionStart() else TurnOrActionStop() end
+    return
+  elseif action == "radial" then
+    if self.HandleRadialKey then self:HandleRadialKey(keystate) end
+    return
+  elseif keystate ~= "down" then
+    return
+  end
+
+  if action == "settings" then
+    if self.ToggleConfig then self:ToggleConfig() end
+  elseif action == "jump" then
+    Jump()
+  elseif action == "autorun" then
+    ToggleAutoRun()
+  elseif action == "bags" then
+    OctoPort_ToggleBags()
+  elseif action == "map" then
+    ToggleWorldMap()
+  elseif action == "target" then
+    TargetNearestEnemy()
+    if self.TargetChanged then self:TargetChanged("right") end
+  elseif action == "reticle" then
+    self.config.reticleEnabled = not self.config.reticleEnabled
+    if self.UpdateReticle then self:UpdateReticle(true) end
+  end
+end
+
+function OctoPort_RearKey(button, keystate)
+  if not OctoPort then return end
+  OctoPort:SignalInput(button, keystate)
+  if OctoPort.bindingCaptureActive then return end
+  OctoPort:HandleRearAction(button, keystate)
+end
+
 function OctoPort_ActionKey(slot, keystate)
   local ids = { "A", "B", "X", "Y" }
   if OctoPort then OctoPort:SignalInput(ids[slot], keystate) end
@@ -250,7 +361,9 @@ function OctoPort_LayerKey(layer, keystate)
 end
 
 function OctoPort_OpenConfig()
-  if OctoPort and OctoPort.ToggleConfig then OctoPort:ToggleConfig(true) end
+  if not OctoPort then return end
+  OctoPort:SignalInput("VIEW")
+  if not OctoPort.bindingCaptureActive and OctoPort.ToggleConfig then OctoPort:ToggleConfig() end
 end
 
 function OctoPort_ToggleBags()

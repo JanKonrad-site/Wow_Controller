@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0
+
+- Added required left-stick setup for forward, backward and strafe movement using the signals emitted by ROG Ally Desktop Mode.
+- Added a centered target reticle with hostile/friendly color, target name, health feedback and adjustable scale.
+- Added right-stick mouse-movement detection to live Diagnostics.
+- Added optional View, M1 and M2 capture steps; View toggles Controller settings.
+- Added configurable rear-paddle actions for settings, interact, jump, autorun, bags, map, targeting, reticle and radial wheel.
+- Documented that OctoWoW must use Desktop Mode, how to make M1/M2 standalone, and which ASUS system buttons cannot be remapped.
+- Migrated existing 0.3 configurations back through the expanded setup wizard.
+
 ## 0.3.0
 
 - Replaced the fixed F-key-only setup with an in-game controller binding wizard that captures the actual keyboard or mouse signal sent by Armoury Crate.
