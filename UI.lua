@@ -8,10 +8,13 @@ local buttonLayout = {
   [2] = { 168,   0, "B", 0.95, 0.20, 0.20 },
   [3] = {  88,   0, "X", 0.20, 0.55, 1.00 },
   [4] = { 128,  40, "Y", 1.00, 0.82, 0.15 },
-  [5] = {-128,  40, "^", 0.82, 0.86, 0.90 },
-  [6] = { -88,   0, ">", 0.82, 0.86, 0.90 },
-  [7] = {-128, -40, "v", 0.82, 0.86, 0.90 },
-  [8] = {-168,   0, "<", 0.82, 0.86, 0.90 },
+}
+
+local targetLayout = {
+  { direction = "up",    x = -128, y =  40, glyph = "^", caption = "PRATEL -" },
+  { direction = "right", x =  -88, y =   0, glyph = ">", caption = "NEPRITEL +" },
+  { direction = "down",  x = -128, y = -40, glyph = "v", caption = "PRATEL +" },
+  { direction = "left",  x = -168, y =   0, glyph = "<", caption = "NEPRITEL -" },
 }
 
 local layerDefinitions = {
@@ -78,10 +81,11 @@ local function AddBadge(button, slot)
   if hotkey then hotkey:Hide() end
 end
 
-local function SetButtonPoint(button, parent, slot)
+local function SetButtonPoint(button, parent, slot, actionSlot)
   if not button or not buttonLayout[slot] then return end
   local data = buttonLayout[slot]
   SaveButtonState(button)
+  button.octoActionSlot = actionSlot
   button:SetParent(parent)
   button:ClearAllPoints()
   button:SetPoint("CENTER", parent, "CENTER", data[1], data[2])
@@ -90,6 +94,51 @@ local function SetButtonPoint(button, parent, slot)
   AddBadge(button, slot)
   local hotkey = _G[button:GetName() .. "HotKey"]
   if hotkey then hotkey:Hide() end
+end
+
+local function CreateTargetPad(parent)
+  local pad = CreateFrame("Frame", "OctoPortTargetPad", parent)
+  pad:SetWidth(210)
+  pad:SetHeight(100)
+  pad:SetPoint("CENTER", parent, "CENTER", 0, 0)
+
+  for index = 1, table.getn(targetLayout) do
+    local data = targetLayout[index]
+    local node = CreateFrame("Frame", nil, pad)
+    node:SetWidth(34)
+    node:SetHeight(34)
+    node:SetPoint("CENTER", pad, "CENTER", data.x, data.y)
+    node:SetBackdrop({
+      bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+      edgeFile = "Interface\\Buttons\\UI-Quickslot2",
+      tile = true,
+      tileSize = 8,
+      edgeSize = 12,
+      insets = { left = 3, right = 3, top = 3, bottom = 3 },
+    })
+    node:SetBackdropColor(0.05, 0.08, 0.10, 0.94)
+    node:SetBackdropBorderColor(0.72, 0.78, 0.82, 0.90)
+
+    local glyph = MakeText(node, "GameFontNormal", data.glyph)
+    glyph:SetPoint("CENTER", node, "CENTER", 0, 1)
+    glyph:SetTextColor(0.82, 0.86, 0.90)
+
+    local caption = MakeText(node, "GameFontDisableSmall", data.caption)
+    if data.direction == "up" then
+      caption:SetPoint("BOTTOM", node, "TOP", 0, 1)
+    elseif data.direction == "down" then
+      caption:SetPoint("TOP", node, "BOTTOM", 0, -1)
+    elseif data.direction == "left" then
+      caption:SetPoint("LEFT", node, "RIGHT", 3, 0)
+    else
+      caption:SetPoint("LEFT", node, "RIGHT", 3, 0)
+    end
+
+    node.direction = data.direction
+    pad[index] = node
+  end
+
+  return pad
 end
 
 function OctoPort:CreateRoot()
@@ -139,8 +188,13 @@ function OctoPort:CreateRoot()
   local active = MakeText(root, "GameFontHighlightSmall", "ZAKLAD")
   active:SetPoint("TOP", title, "BOTTOM", 0, -2)
 
-  local hint = MakeText(root, "GameFontDisableSmall", "LB = SHIFT   LT = CTRL   L3 = CIL   R3 = SKOK")
+  local hint = MakeText(root, "GameFontDisableSmall", "D-PAD = CILE   A = POTVRDIT   DRZ MENU = KOLO")
   hint:SetPoint("BOTTOM", root, "BOTTOM", 0, 7)
+
+  local targetName = MakeText(root, "GameFontHighlightSmall", "BEZ CILE")
+  targetName:SetPoint("TOPLEFT", root, "TOPLEFT", 12, -10)
+  targetName:SetWidth(105)
+  targetName:SetJustifyH("LEFT")
 
   for key, definition in pairs(layerDefinitions) do
     local layer = CreateFrame("Frame", "OctoPortLayer_" .. key, root)
@@ -161,6 +215,8 @@ function OctoPort:CreateRoot()
   self.background = background
   self.activeLayerText = active
   self.hintText = hint
+  self.targetNameText = targetName
+  self.targetPad = CreateTargetPad(root)
 
   local hidden = CreateFrame("Frame", "OctoPortHiddenButtons", UIParent)
   hidden:Hide()
@@ -171,6 +227,7 @@ function OctoPort:CreateRoot()
     if OctoPort.updateElapsed < 0.05 then return end
     OctoPort.updateElapsed = 0
     OctoPort:UpdateLayer(false)
+    OctoPort:UpdateTargetDisplay()
   end)
 end
 
@@ -179,10 +236,16 @@ function OctoPort:CaptureAndPositionButtons()
 
   for key, definition in pairs(layerDefinitions) do
     local layer = self.layers[key]
-    for slot = 1, 8 do
+    for slot = 1, 4 do
       local button = _G[definition.framePrefix .. slot]
       if button then
-        SetButtonPoint(button, layer, slot)
+        local actionSlot = nil
+        if key == "shift" then
+          actionSlot = 60 + slot
+        elseif key == "ctrl" then
+          actionSlot = 48 + slot
+        end
+        SetButtonPoint(button, layer, slot, actionSlot)
         layer.buttons[slot] = button
       end
     end
@@ -190,16 +253,16 @@ function OctoPort:CaptureAndPositionButtons()
 
   -- Bonus action buttons replace the base layer for stances, stealth and forms.
   self.bonusButtons = self.bonusButtons or {}
-  for slot = 1, 8 do
+  for slot = 1, 4 do
     local button = _G["BonusActionButton" .. slot]
     if button then
-      SetButtonPoint(button, self.layers.base, slot)
+      SetButtonPoint(button, self.layers.base, slot, nil)
       self.bonusButtons[slot] = button
     end
   end
 
-  -- Slots 9-12 are not part of the controller diamond. Keep them from
-  -- following ActionButton8 after the default UI updates its anchors.
+  -- Slots 5-12 are not part of the controller face-button diamond. The D-pad
+  -- now owns targeting and is rendered separately on the left side.
   local unusedPrefixes = {
     "ActionButton",
     "BonusActionButton",
@@ -207,10 +270,15 @@ function OctoPort:CaptureAndPositionButtons()
     "MultiBarBottomRightButton",
   }
   for _, prefix in pairs(unusedPrefixes) do
-    for slot = 9, 12 do
+    for slot = 5, 12 do
       local button = _G[prefix .. slot]
       if button then
         SaveButtonState(button)
+        if prefix == "MultiBarBottomLeftButton" then
+          button.octoActionSlot = 60 + slot
+        elseif prefix == "MultiBarBottomRightButton" then
+          button.octoActionSlot = 48 + slot
+        end
         button:SetParent(self.hiddenButtons)
       end
     end
@@ -224,7 +292,7 @@ function OctoPort:UpdateBonusButtons(force)
   if not force and self.lastBonusVisible == bonusVisible then return end
   self.lastBonusVisible = bonusVisible
 
-  for slot = 1, 8 do
+  for slot = 1, 4 do
     local normal = self.layers.base.buttons[slot]
     local bonus = self.bonusButtons and self.bonusButtons[slot]
     if normal then
@@ -245,6 +313,116 @@ function OctoPort:GetActiveLayer()
   return "base"
 end
 
+function OctoPort:InstallActionSlotHook()
+  if self.actionSlotHooked or not ActionButton_GetPagedID then return end
+  self.actionSlotHooked = true
+  self.originalActionButtonGetPagedID = ActionButton_GetPagedID
+
+  ActionButton_GetPagedID = function(button)
+    if button and button.octoActionSlot then
+      return button.octoActionSlot
+    end
+    return OctoPort.originalActionButtonGetPagedID(button)
+  end
+end
+
+function OctoPort:GetControllerActionButton(slot)
+  if not self.layers or slot < 1 or slot > 4 then return nil end
+  local layerName = self:GetActiveLayer()
+
+  if layerName == "base" and BonusActionBarFrame and BonusActionBarFrame:IsVisible() then
+    return self.bonusButtons and self.bonusButtons[slot]
+  end
+
+  local layer = self.layers[layerName]
+  return layer and layer.buttons[slot]
+end
+
+function OctoPort:PrepareAutomaticTarget()
+  if not self.config or not self.config.autoTarget then return end
+  if UnitExists("target") and not UnitIsDead("target") then return end
+  TargetNearestEnemy()
+end
+
+function OctoPort:HandleControllerAction(slot, keystate)
+  self.controllerPressed = self.controllerPressed or {}
+  self.contextConsumed = self.contextConsumed or {}
+
+  if keystate == "down" then
+    if self.HandleContextButton and self:HandleContextButton(slot) then
+      self.contextConsumed[slot] = true
+      return
+    end
+
+    local button = self:GetControllerActionButton(slot)
+    if not button then return end
+    local action = ActionButton_GetPagedID(button)
+    self.controllerPressed[slot] = { button = button, action = action }
+    button:SetButtonState("PUSHED")
+    return
+  end
+
+  if self.contextConsumed[slot] then
+    self.contextConsumed[slot] = nil
+    return
+  end
+
+  local pressed = self.controllerPressed[slot]
+  self.controllerPressed[slot] = nil
+  if not pressed or not pressed.button or not pressed.action then return end
+
+  pressed.button:SetButtonState("NORMAL")
+  if not HasAction(pressed.action) then return end
+  self:PrepareAutomaticTarget()
+  UseAction(pressed.action, 0)
+
+  if IsCurrentAction(pressed.action) or IsAutoRepeatAction(pressed.action) then
+    pressed.button:SetChecked(1)
+  else
+    pressed.button:SetChecked(0)
+  end
+end
+
+function OctoPort:TargetChanged(direction)
+  self.targetFlashDirection = direction
+  self.targetFlashUntil = GetTime() + 0.30
+  self:UpdateTargetDisplay()
+end
+
+function OctoPort:UpdateTargetDisplay()
+  if not self.targetNameText then return end
+
+  if UnitExists("target") then
+    local name = UnitName("target") or "CIL"
+    self.targetNameText:SetText(string.upper(name))
+    if UnitCanAttack("player", "target") then
+      self.targetNameText:SetTextColor(1.0, 0.28, 0.24)
+    else
+      self.targetNameText:SetTextColor(0.30, 0.95, 0.45)
+    end
+  else
+    self.targetNameText:SetText("BEZ CILE")
+    self.targetNameText:SetTextColor(0.65, 0.68, 0.72)
+  end
+
+  if not self.targetPad then return end
+  local activeDirection = nil
+  if self.targetFlashUntil and GetTime() < self.targetFlashUntil then
+    activeDirection = self.targetFlashDirection
+  end
+
+  for index = 1, table.getn(targetLayout) do
+    local node = self.targetPad[index]
+    if node then
+      if node.direction == activeDirection then
+        node:SetBackdropBorderColor(0.24, 0.94, 0.88, 1)
+      else
+        node:SetBackdropBorderColor(0.72, 0.78, 0.82, 0.90)
+      end
+    end
+  end
+end
+
 function OctoPort:UpdateLayer(force)
   if not self.root or not self.config or not self.config.enabled then return end
   self:UpdateBonusButtons(false)
@@ -261,7 +439,7 @@ function OctoPort:UpdateLayer(force)
       layer:SetPoint("CENTER", self.root, "CENTER", 0, positions[key])
       layer:SetAlpha(key == active and 1 or 0.72)
       layer:Show()
-      for slot = 1, 8 do
+      for slot = 1, 4 do
         if layer.buttons[slot] then layer.buttons[slot]:Show() end
       end
     end
@@ -275,7 +453,7 @@ function OctoPort:UpdateLayer(force)
       layer:SetAlpha(1)
       if key == active then
         layer:Show()
-        for slot = 1, 8 do
+        for slot = 1, 4 do
           if layer.buttons[slot] then layer.buttons[slot]:Show() end
         end
       else
@@ -284,7 +462,7 @@ function OctoPort:UpdateLayer(force)
     end
     self.root:SetHeight(150)
     self.activeLayerText:SetText(layerDefinitions[active].title)
-    self.hintText:SetText("LB = SHIFT   LT = CTRL   L3 = CIL   R3 = SKOK")
+    self.hintText:SetText("D-PAD = CILE   A = POTVRDIT   DRZ MENU = KOLO")
   end
 end
 
@@ -349,6 +527,7 @@ function OctoPort:SetUIEnabled(enabled)
 end
 
 function OctoPort:InitializeUI()
+  self:InstallActionSlotHook()
   self:CreateRoot()
   self:ApplyLayout()
   self:SetUIEnabled(self.config.enabled)
