@@ -1,8 +1,8 @@
--- OctoPort 0.3.0
+-- OctoPort 0.4.0
 -- Controller-first interface for OctoWoW / World of Warcraft 1.12.x.
 
 OctoPort = OctoPort or {}
-OctoPort.version = "0.3.0"
+OctoPort.version = "0.4.0"
 
 BINDING_HEADER_OCTOPORT = "WOW Controller"
 BINDING_NAME_OCTOPORT_TOGGLEBAGS = "Open / close all bags"
@@ -19,6 +19,12 @@ BINDING_NAME_OCTOPORT_TARGET_RIGHT = "Next enemy target"
 BINDING_NAME_OCTOPORT_LAYER_LB = "Controller LB action layer"
 BINDING_NAME_OCTOPORT_LAYER_LT = "Controller LT action layer"
 BINDING_NAME_OCTOPORT_OPENCONFIG = "Open WOW Controller settings"
+BINDING_NAME_OCTOPORT_MOVE_FORWARD = "Left stick forward"
+BINDING_NAME_OCTOPORT_MOVE_BACKWARD = "Left stick backward"
+BINDING_NAME_OCTOPORT_MOVE_LEFT = "Left stick strafe left"
+BINDING_NAME_OCTOPORT_MOVE_RIGHT = "Left stick strafe right"
+BINDING_NAME_OCTOPORT_REAR_M1 = "ROG Ally rear paddle M1"
+BINDING_NAME_OCTOPORT_REAR_M2 = "ROG Ally rear paddle M2"
 
 local defaultRadialSlots = {
   "map",
@@ -49,6 +55,9 @@ local defaults = {
   mountName = "",
   nativeModifiers = { SHIFT = "shift", CTRL = "ctrl" },
   selectedConfigTab = 1,
+  reticleEnabled = true,
+  reticleScale = 1.00,
+  rearActions = { M1 = "settings", M2 = "interact" },
 }
 
 local function CopyValue(value)
@@ -92,6 +101,7 @@ function OctoPort:ShowCommands()
   self:Print("/octoport wheel - edit the radial menu")
   self:Print("/octoport target on | off - automatic enemy target for empty target")
   self:Print("/octoport quest on | off - automatic quest acceptance")
+  self:Print("/octoport reticle on | off - center target reticle")
   self:Print("/octoport mount NAME - preferred mount item or spell")
   self:Print("/octoport on | off - enable or hide the HUD")
 end
@@ -174,6 +184,14 @@ function OctoPort:HandleSlash(message)
   elseif message == "quest off" then
     self.config.autoAcceptQuests = false
     self:Print("Automatic quest acceptance disabled.")
+  elseif message == "reticle on" then
+    self.config.reticleEnabled = true
+    if self.UpdateReticle then self:UpdateReticle(true) end
+    self:Print("Target reticle enabled.")
+  elseif message == "reticle off" then
+    self.config.reticleEnabled = false
+    if self.UpdateReticle then self:UpdateReticle(true) end
+    self:Print("Target reticle disabled.")
   elseif string.sub(message, 1, 5) == "mount" then
     local name = Trim(string.sub(originalMessage, 6))
     self.config.mountName = name
@@ -214,7 +232,7 @@ events:SetScript("OnEvent", function()
     if OctoPort.config.enabled then
       OctoPort:Print("v" .. OctoPort.version .. " loaded. Type /octoport for help.")
     end
-    if (OctoPort.config.bindingVersion or 0) < 3 and OctoPort.ShowConfigTab then
+    if (OctoPort.config.bindingVersion or 0) < 4 and OctoPort.ShowConfigTab then
       OctoPort.config.firstRunSeen = true
       OctoPort:ShowConfigTab(1, true)
     elseif not OctoPort.config.firstRunSeen and OctoPort.ToggleConfig then

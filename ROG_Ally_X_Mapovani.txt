@@ -1,15 +1,17 @@
-WOW CONTROLLER 0.3.0 - ROG ALLY X / ARMOURY CRATE SE
+WOW CONTROLLER 0.4.0 - ROG ALLY X / ARMOURY CRATE SE
 ================================================
 
 RYCHLY START
 ------------
 1. Aktualizuj addon v OctoLauncheru a spust hru.
-2. Ve hre napis /wc.
-3. Zvol SPUSTIT PRUVODCE.
-4. Postupne stiskni A, B, X, Y, D-pad, Menu, LB a LT.
-5. V zalozce DIAGNOSTIKA over, ze kazde tlacitko sviti zelene SIGNAL.
+2. V Command Centeru nastav CONTROL MODE = DESKTOP (ne Auto ani Gamepad).
+3. Ve hre napis /wc a zvol SPUSTIT PRUVODCE.
+4. Postupne pohni levou packou ve 4 smerech a stiskni pozadovana tlacitka.
+5. View, LB, LT, M1 a M2 jsou volitelne; lze je v pruvodci preskocit.
+6. V DIAGNOSTICE over tlacitka i pohyb prave packy jako R-Stick / Mouse.
 
-Addon uz nepredpoklada konkretni F-klavesy. Zachyti skutecnou klavesu nebo klik,
+Klient WoW 1.12 neumi XInput, proto Gamepad Mode nefunguje. Addon zachyti
+skutecnou klavesu nebo klik,
 ktery Armoury Crate posila. Pokud se pruvodce po stisku neposune, dane tlacitko
 neposila do WoW zadny klavesnicovy/mysi signal. V hernim Desktop Mode profilu mu
 prirad libovolnou nepouzitou klavesu a zkus stisk znovu.
@@ -21,9 +23,12 @@ Prava packa       Mouse                Kurzor / kamera / radialni vyber
 RB                Levy klik            Vyber v UI
 RT                Pravy klik           Kamera / interakce
 R3                Space                Skok
-View              Escape               Nouzove zpet / zavrit
-M1                F                    Interakce s cilem
-M2                R                    Vsechny batohy
+View              Libovolna klavesa    Nastaveni WOW Controller
+M1                Libovolna klavesa    Nastavitelna akce (vychozi nastaveni)
+M2                Libovolna klavesa    Nastavitelna akce (vychozi interakce)
+
+U M1/M2 vypni v Armoury Crate volbu Set as Secondary Function. Tlacitka Command
+Center a Armoury Crate jsou systemova a nelze je premapovat ani zachytit addonem.
 
 STARY PRESET (JEN ZALOHA)
 -------------------------
@@ -32,7 +37,7 @@ D-pad             Sipky
 Menu              F8
 LB/LT             Shift/Ctrl
 
-Pouzij tlacitko F8-F12 PRESET nebo prikaz /octoport preset. Pro bezne nastaveni
+Pouzij tlacitko ROG ALLY PRESET nebo prikaz /octoport preset. Pro bezne nastaveni
 je presnejsi novy pruvodce.
 
 OVLADANI VE HRE
@@ -47,6 +52,8 @@ OVLADANI VE HRE
 V Controller menu meni D-pad vlevo/vpravo zalozku, nahoru/dolu vyber, A potvrdi
 a B zavre. Ve hre D-pad nahoru/dolu prepina pratele a vlevo/vpravo nepritele.
 Podrzenim Menu se otevre radialni kolo; smer vyber pravou packou nebo D-padem.
+Leva packa ovlada pohyb. Zamerovac uprostred je cerveny pro nepritele, zeleny
+pro pratele a ukazuje zdravi cile. Akce M1/M2 zmenis v zalozce HRANI.
 
 BEZPECNOST HESLA
 ----------------

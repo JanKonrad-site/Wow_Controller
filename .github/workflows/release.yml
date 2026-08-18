@@ -20,6 +20,7 @@ jobs:
           test -f Wow_Controller.toc
           test -f Core.lua
           test -f UI.lua
+          test -f Reticle.lua
           test -f Radial.lua
           test -f Quest.lua
           test -f Loot.lua
