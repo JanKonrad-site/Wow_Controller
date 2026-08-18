@@ -1,12 +1,32 @@
--- OctoPort 0.1.0
+-- OctoPort 0.2.0
 -- Controller-first interface for OctoWoW / World of Warcraft 1.12.x.
 
 OctoPort = OctoPort or {}
-OctoPort.version = "0.1.0"
+OctoPort.version = "0.2.0"
 
 BINDING_HEADER_OCTOPORT = "WOW Controller"
 BINDING_NAME_OCTOPORT_TOGGLEBAGS = "Open / close all bags"
 BINDING_NAME_OCTOPORT_TOGGLEHELP = "Open OctoPort help"
+BINDING_NAME_OCTOPORT_ACTION_A = "Controller A / confirm"
+BINDING_NAME_OCTOPORT_ACTION_B = "Controller B / back"
+BINDING_NAME_OCTOPORT_ACTION_X = "Controller X"
+BINDING_NAME_OCTOPORT_ACTION_Y = "Controller Y"
+BINDING_NAME_OCTOPORT_RADIAL = "Hold controller Menu / radial menu"
+BINDING_NAME_OCTOPORT_TARGET_UP = "Previous friendly target"
+BINDING_NAME_OCTOPORT_TARGET_DOWN = "Next friendly target"
+BINDING_NAME_OCTOPORT_TARGET_LEFT = "Previous enemy target"
+BINDING_NAME_OCTOPORT_TARGET_RIGHT = "Next enemy target"
+
+local defaultRadialSlots = {
+  "map",
+  "quests",
+  "bags",
+  "character",
+  "mount",
+  "chat",
+  "combatlog",
+  "spellbook",
+}
 
 local defaults = {
   enabled = true,
@@ -18,12 +38,26 @@ local defaults = {
   setupComplete = false,
   firstRunSeen = false,
   bindingBackup = nil,
+  autoTarget = true,
+  autoAcceptQuests = true,
+  radialHold = 0.35,
+  radialSlots = defaultRadialSlots,
+  mountName = "",
 }
+
+local function CopyValue(value)
+  if type(value) ~= "table" then return value end
+  local result = {}
+  for key, nested in pairs(value) do
+    result[key] = CopyValue(nested)
+  end
+  return result
+end
 
 local function CopyDefaults(target, source)
   for key, value in pairs(source) do
     if target[key] == nil then
-      target[key] = value
+      target[key] = CopyValue(value)
     end
   end
 end
@@ -47,6 +81,10 @@ function OctoPort:ShowCommands()
   self:Print("/octoport move - unlock or lock the controller HUD")
   self:Print("/octoport scale 0.7-1.6 - resize the HUD")
   self:Print("/octoport reset - reset HUD position and size")
+  self:Print("/octoport wheel - edit the radial menu")
+  self:Print("/octoport target on | off - automatic enemy target for empty target")
+  self:Print("/octoport quest on | off - automatic quest acceptance")
+  self:Print("/octoport mount NAME - preferred mount item or spell")
   self:Print("/octoport on | off - enable or hide the HUD")
 end
 
@@ -78,7 +116,8 @@ local function Trim(text)
 end
 
 function OctoPort:HandleSlash(message)
-  message = Trim(string.lower(message or ""))
+  local originalMessage = Trim(message or "")
+  message = string.lower(originalMessage)
 
   if message == "" or message == "help" then
     if self.ToggleHelp then self:ToggleHelp(true) end
@@ -108,6 +147,32 @@ function OctoPort:HandleSlash(message)
     self:Print("HUD scale: " .. value)
   elseif message == "reset" then
     self:ResetLayout()
+  elseif message == "wheel" then
+    if self.ToggleRadialEditor then self:ToggleRadialEditor() end
+  elseif message == "wheel reset" then
+    self.config.radialSlots = CopyValue(defaultRadialSlots)
+    if self.RefreshRadial then self:RefreshRadial() end
+    self:Print("Radial menu reset to defaults.")
+  elseif message == "target on" or message == "autotarget on" then
+    self.config.autoTarget = true
+    self:Print("Automatic enemy targeting enabled.")
+  elseif message == "target off" or message == "autotarget off" then
+    self.config.autoTarget = false
+    self:Print("Automatic enemy targeting disabled.")
+  elseif message == "quest on" then
+    self.config.autoAcceptQuests = true
+    self:Print("Automatic quest acceptance enabled. Hold LB while opening a quest to inspect it first.")
+  elseif message == "quest off" then
+    self.config.autoAcceptQuests = false
+    self:Print("Automatic quest acceptance disabled.")
+  elseif string.sub(message, 1, 5) == "mount" then
+    local name = Trim(string.sub(originalMessage, 6))
+    self.config.mountName = name
+    if name == "" then
+      self:Print("Preferred mount cleared. Use /octoport mount NAME")
+    else
+      self:Print("Preferred mount: " .. name)
+    end
   elseif message == "on" then
     self:SetEnabled(true)
   elseif message == "off" then
@@ -130,7 +195,7 @@ local events = CreateFrame("Frame", "OctoPortEvents")
 events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_LOGIN")
 events:SetScript("OnEvent", function()
-  if event == "ADDON_LOADED" and arg1 == "OctoPort" then
+  if event == "ADDON_LOADED" and (arg1 == "Wow_Controller" or arg1 == "OctoPort") then
     OctoPort:InitializeConfig()
   elseif event == "PLAYER_LOGIN" then
     if not OctoPort.config then OctoPort:InitializeConfig() end

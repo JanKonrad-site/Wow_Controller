@@ -1,8 +1,35 @@
 <Bindings>
-  <Binding name="OCTOPORT_TOGGLEBAGS" header="OCTOPORT" runOnUp="true">
-    if (keystate == "down") then OctoPort_ToggleBags() end
+  <Binding name="OCTOPORT_ACTION_A" header="OCTOPORT" runOnUp="true">
+    OctoPort_ActionKey(1, keystate)
   </Binding>
-  <Binding name="OCTOPORT_TOGGLEHELP" runOnUp="true">
-    if (keystate == "down") then OctoPort_ToggleHelp() end
+  <Binding name="OCTOPORT_ACTION_B" runOnUp="true">
+    OctoPort_ActionKey(2, keystate)
+  </Binding>
+  <Binding name="OCTOPORT_ACTION_X" runOnUp="true">
+    OctoPort_ActionKey(3, keystate)
+  </Binding>
+  <Binding name="OCTOPORT_ACTION_Y" runOnUp="true">
+    OctoPort_ActionKey(4, keystate)
+  </Binding>
+  <Binding name="OCTOPORT_RADIAL" runOnUp="true">
+    OctoPort_RadialKey(keystate)
+  </Binding>
+  <Binding name="OCTOPORT_TARGET_UP">
+    OctoPort_Target("up")
+  </Binding>
+  <Binding name="OCTOPORT_TARGET_DOWN">
+    OctoPort_Target("down")
+  </Binding>
+  <Binding name="OCTOPORT_TARGET_LEFT">
+    OctoPort_Target("left")
+  </Binding>
+  <Binding name="OCTOPORT_TARGET_RIGHT">
+    OctoPort_Target("right")
+  </Binding>
+  <Binding name="OCTOPORT_TOGGLEBAGS">
+    OctoPort_ToggleBags()
+  </Binding>
+  <Binding name="OCTOPORT_TOGGLEHELP">
+    OctoPort_ToggleHelp()
   </Binding>
 </Bindings>

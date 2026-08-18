@@ -1,13 +1,13 @@
 # WOW Controller
 
-Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. WOW Controller brings the useful parts of a modern console interface to the Vanilla client: a cross-hotbar layout, three modifier layers, controller glyphs, target/interact bindings and an in-game setup guide.
+Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. WOW Controller brings the useful parts of a modern console interface to the Vanilla client: a cross-hotbar layout, directional targeting, three modifier layers, a radial utility menu and context-aware controller buttons.
 
 OctoWoW's 1.12 client has no native XInput support. WOW Controller therefore uses two cooperating parts:
 
 - Armoury Crate SE Desktop Mode converts the physical controller to keyboard and mouse input.
-- WOW Controller turns that input into a console-style HUD and 24 action slots inside WoW.
+- WOW Controller turns that input into a console-style HUD, 12 face-button actions, D-pad targeting and an editable radial menu inside WoW.
 
-No automation, botting, injected DLL or one-button rotation is used. Every action still requires one physical button press.
+There is no combat rotation, botting, injected DLL or unattended gameplay. Every combat action still requires one physical button press. Optional quest acceptance only acts after the normal quest detail panel is already open.
 
 ## Install with OctoLauncher
 
@@ -29,18 +29,17 @@ In Armoury Crate SE, add the actual `WoW.exe` to the Game Library, keep **Contro
 |---|---:|---|
 | Left stick | W / A / S / D | Move |
 | Right stick | Mouse | Cursor / camera |
-| A / B / X / Y | 1 / 2 / 3 / 4 | Face-button actions |
-| D-pad Up / Right / Down / Left | 5 / 6 / 7 / 8 | D-pad actions |
+| A / B / X / Y | F9 / F10 / F11 / F12 | Context action / face-button actions |
+| D-pad Up / Down | Up / Down arrows | Previous / next friendly target |
+| D-pad Left / Right | Left / Right arrows | Previous / next enemy target |
 | LB | Shift | Second action layer |
 | LT | Ctrl | Third action layer |
 | RB | Left mouse button | UI click / select |
 | RT | Right mouse button | Camera turn / world interaction |
 | L3 | Tab | Next enemy |
-| LB + L3 | Shift + Tab | Previous enemy |
-| LT + L3 | Ctrl + Tab | Nearest friendly target |
 | R3 | Space | Jump |
-| View | M | World map |
-| Menu | Escape | Back / game menu |
+| Menu | F8 | Tap: game menu; hold: radial menu |
+| View | Escape | Back / close UI |
 | M1 | F | Interact / right-click target |
 | M2 | R | Open or close all bags |
 
@@ -49,9 +48,10 @@ For M1 and M2, disable **Set as Secondary Function** before assigning their own 
 ## First setup in game
 
 1. Run `/octoport setup` to apply and save the recommended bindings.
-2. Run `/octoport edit` to display all three layers.
-3. Drag abilities onto the base, LB and LT layers with the touchscreen or mouse.
-4. Run `/octoport edit` again to return to play mode.
+2. In Armoury Crate, apply the exact mapping above. In particular, **A must not send Enter**, otherwise WoW opens chat before the addon receives the button.
+3. Run `/octoport edit` to display all three layers.
+4. Drag four abilities onto each of the base, LB and LT layers with the touchscreen or mouse.
+5. Run `/octoport edit` again to return to play mode.
 
 Your previous bindings are backed up per character. Use `/octoport restore` to restore them.
 
@@ -64,7 +64,22 @@ Your previous bindings are backed up per character. Use `/octoport restore` to r
 - `/octoport move` — unlock or lock the HUD for dragging.
 - `/octoport scale 0.7-1.6` — change HUD scale.
 - `/octoport reset` — reset HUD position and size.
+- `/octoport wheel` — open the radial-menu editor; left/right click cycles each slot.
+- `/octoport wheel reset` — restore the default radial layout.
+- `/octoport target on|off` — toggle automatic enemy targeting when no live target exists.
+- `/octoport quest on|off` — toggle automatic acceptance of an already displayed quest.
+- `/octoport mount NAME` — choose the mount spell or bag item used by the radial menu.
 - `/octoport on` / `/octoport off` — enable or disable the controller HUD.
+
+## Controller behavior
+
+- **A** confirms the visible quest/dialog button or uses face action 1.
+- **B** cancels/closes a visible panel or uses face action 2.
+- **X/Y** use face actions 3/4.
+- **D-pad Up/Down** cycles friendly targets; **Left/Right** cycles enemies.
+- Hold **Menu**, point with the right stick and release Menu or press A to execute the selected radial action. B cancels it.
+- The default wheel contains Map, Quests, Bags, Character, Mount, Chat, Combat Log and Spellbook. Every position is editable in game.
+- Auto quest acceptance can be bypassed temporarily by holding **LB/Shift** while opening the quest.
 
 ## Compatibility
 
