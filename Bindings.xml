@@ -26,6 +26,15 @@
   <Binding name="OCTOPORT_TARGET_RIGHT">
     OctoPort_Target("right")
   </Binding>
+  <Binding name="OCTOPORT_LAYER_LB" runOnUp="true">
+    OctoPort_LayerKey("shift", keystate)
+  </Binding>
+  <Binding name="OCTOPORT_LAYER_LT" runOnUp="true">
+    OctoPort_LayerKey("ctrl", keystate)
+  </Binding>
+  <Binding name="OCTOPORT_OPENCONFIG">
+    OctoPort_OpenConfig()
+  </Binding>
   <Binding name="OCTOPORT_TOGGLEBAGS">
     OctoPort_ToggleBags()
   </Binding>
