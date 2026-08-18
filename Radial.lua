@@ -200,7 +200,15 @@ function OctoPort:CancelVisibleUI()
   for index = 1, table.getn(closableFrames) do
     local frame = _G[closableFrames[index]]
     if frame and frame:IsVisible() then
-      ToggleGameMenu()
+      if frame == GameMenuFrame then
+        ToggleGameMenu()
+      elseif frame == WorldMapFrame and ToggleWorldMap then
+        ToggleWorldMap()
+      elseif HideUIPanel then
+        HideUIPanel(frame)
+      else
+        frame:Hide()
+      end
       return true
     end
   end
@@ -210,7 +218,13 @@ end
 
 function OctoPort:HandleContextButton(slot)
   if self.radialFrame and self.radialFrame:IsVisible() and self.radialEditor then
-    if slot == 2 then
+    if slot == 1 and self.radialSelection then
+      self:CycleRadialAction(self.radialSelection, 1)
+      return true
+    elseif slot == 3 and self.radialSelection then
+      self:CycleRadialAction(self.radialSelection, -1)
+      return true
+    elseif slot == 2 then
       self:HideRadial()
       self:Print("Radial menu editor closed.")
       return true
@@ -429,7 +443,7 @@ function OctoPort:ShowRadial(editor)
 
   if self.radialEditor then
     self.radialFrame:SetPoint("CENTER", UIParent, "CENTER", 0, 20)
-    self.radialCenterHint:SetText("STRED / B = HOTOVO")
+    self.radialCenterHint:SetText("A/X ZMENIT  B HOTOVO")
   else
     local scale = UIParent:GetEffectiveScale()
     if not scale or scale == 0 then scale = 1 end
@@ -465,11 +479,16 @@ function OctoPort:ToggleRadialEditor()
     self:Print("Radial menu editor closed.")
   else
     self:ShowRadial(true)
-    self:Print("Radial editor: left click moves forward, right click moves back.")
+    self:Print("Radial editor: D-pad selects, A/X changes, B closes. Mouse clicks also work.")
   end
 end
 
 function OctoPort:HandleRadialKey(keystate)
+  if self.configFrame and self.configFrame:IsVisible() then
+    if keystate ~= "down" then self.configFrame:Hide() end
+    return
+  end
+
   if keystate == "down" then
     if self.radialEditor then
       self:HideRadial()

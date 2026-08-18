@@ -1,51 +1,56 @@
-WOW CONTROLLER 0.2.0 - ROG ALLY X / ARMOURY CRATE SE
+WOW CONTROLLER 0.3.0 - ROG ALLY X / ARMOURY CRATE SE
 ================================================
 
-1. Pridej skutecny WoW.exe do Game Library v Armoury Crate SE.
-2. V Command Centeru nech Control Mode = Auto.
-3. Otevri Game Profile hry a uprav Desktop Mode.
-4. U M1 a M2 vypni "Set as Secondary Function".
-5. Ve hre spust /octoport setup.
+RYCHLY START
+------------
+1. Aktualizuj addon v OctoLauncheru a spust hru.
+2. Ve hre napis /wc.
+3. Zvol SPUSTIT PRUVODCE.
+4. Postupne stiskni A, B, X, Y, D-pad, Menu, LB a LT.
+5. V zalozce DIAGNOSTIKA over, ze kazde tlacitko sviti zelene SIGNAL.
 
-MAPOVANI
---------
+Addon uz nepredpoklada konkretni F-klavesy. Zachyti skutecnou klavesu nebo klik,
+ktery Armoury Crate posila. Pokud se pruvodce po stisku neposune, dane tlacitko
+neposila do WoW zadny klavesnicovy/mysi signal. V hernim Desktop Mode profilu mu
+prirad libovolnou nepouzitou klavesu a zkus stisk znovu.
+
+DOPORUCENE MAPOVANI MIMO PRUVODCE
+---------------------------------
 Leva packa        W / A / S / D       Pohyb
-Prava packa       Mouse                Kurzor / kamera / vyber z kola
-A                 F9                   Akce 1 / potvrdit
-B                 F10                  Akce 2 / zpet
-X                 F11                  Akce 3
-Y                 F12                  Akce 4
-D-pad nahoru      Sipka nahoru         Predchozi pritel
-D-pad dolu        Sipka dolu           Dalsi pritel
-D-pad doleva      Sipka doleva         Predchozi nepritel
-D-pad doprava     Sipka doprava        Dalsi nepritel
-LB                Shift                Vrstva LB / docasne vypnuti auto questu
-LT                Ctrl                 Vrstva LT
+Prava packa       Mouse                Kurzor / kamera / radialni vyber
 RB                Levy klik            Vyber v UI
-RT                Pravy klik           Otaceni kamery / interakce
-L3                Tab                  Dalsi nepritel - zaloha
+RT                Pravy klik           Kamera / interakce
 R3                Space                Skok
-Menu              F8                   Kratce menu / podrzet radialni kolo
-View              Escape               Zpet / zavrit okno
+View              Escape               Nouzove zpet / zavrit
 M1                F                    Interakce s cilem
 M2                R                    Vsechny batohy
 
-DULEZITE
---------
-A nesmi zustat namapovane na Enter. Enter otevira chat drive, nez stisk dostane
-addon. Chat je ve vychozim radialnim kole a lze ho presunout na libovolnou pozici.
+STARY PRESET (JEN ZALOHA)
+-------------------------
+A/B/X/Y           F9/F10/F11/F12
+D-pad             Sipky
+Menu              F8
+LB/LT             Shift/Ctrl
 
-VE HRE
-------
-/octoport setup          ulozi puvodni klavesy a nastavi WOW Controller
-/octoport edit           zobrazi tri vrstvy pro pretahovani schopnosti
-/octoport wheel          otevre editor radialniho kola
-/octoport wheel reset    vrati vychozi polozky kola
-/octoport target on|off  zapne nebo vypne automaticky cil
-/octoport quest on|off   zapne nebo vypne automaticke prijeti questu
-/octoport mount NAZEV    nastavi mount spell nebo predmet z batohu
-/octoport restore        vrati puvodni klavesy
-/octoport                otevre napovedu
+Pouzij tlacitko F8-F12 PRESET nebo prikaz /octoport preset. Pro bezne nastaveni
+je presnejsi novy pruvodce.
 
-Poznamka: OctoWoW 1.12.2 nema nativni XInput. Desktop Mode proto prevadi
-ovladac na klavesnici a mys; WOW Controller z toho uvnitr hry dela konzolove UI.
+OVLADANI VE HRE
+---------------
+/wc                         Controller menu
+/octoport setup             Pruvodce mapovanim
+/octoport diagnostics       Zivy test vstupu
+/octoport preset            Stary F8-F12 preset
+/octoport restore           Obnovit puvodni bindy
+/octoport wheel             Editor radialniho kola
+
+V Controller menu meni D-pad vlevo/vpravo zalozku, nahoru/dolu vyber, A potvrdi
+a B zavre. Ve hre D-pad nahoru/dolu prepina pratele a vlevo/vpravo nepritele.
+Podrzenim Menu se otevre radialni kolo; smer vyber pravou packou nebo D-padem.
+
+BEZPECNOST HESLA
+----------------
+Addon se nacita az po prihlaseni a heslo nikdy neuklada. Heslo v Lua nebo
+SavedVariables by bylo otevrene jako prosty text. Bezpecne automaticke
+prihlaseni musi resit launcher nebo spravce hesel pres uloziste operacniho
+systemu.

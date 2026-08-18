@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0
+
+- Replaced the fixed F-key-only setup with an in-game controller binding wizard that captures the actual keyboard or mouse signal sent by Armoury Crate.
+- Added a ConsolePort-inspired Controller menu with Setup, Controls, Gameplay and live Diagnostics tabs.
+- Added per-button rebinding, native or custom LB/LT layer support and safe restoration of overwritten bindings.
+- Added D-pad navigation in the Controller menu and cardinal D-pad selection in the radial wheel.
+- Added a persistent WC settings button to the controller HUD and changed the /wc command to open settings directly.
+- Added live input feedback for ABXY, D-pad, Menu, LB and LT so missing device output can be diagnosed in game.
+- Kept the legacy F8-F12 ROG Ally preset as an optional fallback.
+- Fixed B/back closing visible Blizzard panels instead of accidentally opening the game menu.
+
 ## 0.2.0
 
 - Replaced D-pad action slots with directional friendly/enemy targeting.

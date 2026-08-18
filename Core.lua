@@ -1,8 +1,8 @@
--- OctoPort 0.2.0
+-- OctoPort 0.3.0
 -- Controller-first interface for OctoWoW / World of Warcraft 1.12.x.
 
 OctoPort = OctoPort or {}
-OctoPort.version = "0.2.0"
+OctoPort.version = "0.3.0"
 
 BINDING_HEADER_OCTOPORT = "WOW Controller"
 BINDING_NAME_OCTOPORT_TOGGLEBAGS = "Open / close all bags"
@@ -16,6 +16,9 @@ BINDING_NAME_OCTOPORT_TARGET_UP = "Previous friendly target"
 BINDING_NAME_OCTOPORT_TARGET_DOWN = "Next friendly target"
 BINDING_NAME_OCTOPORT_TARGET_LEFT = "Previous enemy target"
 BINDING_NAME_OCTOPORT_TARGET_RIGHT = "Next enemy target"
+BINDING_NAME_OCTOPORT_LAYER_LB = "Controller LB action layer"
+BINDING_NAME_OCTOPORT_LAYER_LT = "Controller LT action layer"
+BINDING_NAME_OCTOPORT_OPENCONFIG = "Open WOW Controller settings"
 
 local defaultRadialSlots = {
   "map",
@@ -36,6 +39,7 @@ local defaults = {
   editMode = false,
   moveMode = false,
   setupComplete = false,
+  bindingVersion = 0,
   firstRunSeen = false,
   bindingBackup = nil,
   autoTarget = true,
@@ -43,6 +47,8 @@ local defaults = {
   radialHold = 0.35,
   radialSlots = defaultRadialSlots,
   mountName = "",
+  nativeModifiers = { SHIFT = "shift", CTRL = "ctrl" },
+  selectedConfigTab = 1,
 }
 
 local function CopyValue(value)
@@ -75,7 +81,9 @@ function OctoPort:InitializeConfig()
 end
 
 function OctoPort:ShowCommands()
-  self:Print("/octoport setup - apply the recommended keyboard bindings")
+  self:Print("/octoport - open controller settings")
+  self:Print("/octoport setup - start the controller binding wizard")
+  self:Print("/octoport preset - apply the legacy ROG Ally F-key preset")
   self:Print("/octoport restore - restore bindings saved before setup")
   self:Print("/octoport edit - show all three action layers")
   self:Print("/octoport move - unlock or lock the controller HUD")
@@ -120,12 +128,13 @@ function OctoPort:HandleSlash(message)
   message = string.lower(originalMessage)
 
   if message == "" or message == "help" then
-    if self.ToggleHelp then self:ToggleHelp(true) end
-    self:ShowCommands()
+    if self.ToggleConfig then self:ToggleConfig(true) end
     return
   end
 
   if message == "setup" then
+    if self.StartBindingWizard then self:StartBindingWizard() end
+  elseif message == "preset" then
     self:ApplyRecommendedBindings()
   elseif message == "restore" then
     self:RestoreBindings()
@@ -177,6 +186,8 @@ function OctoPort:HandleSlash(message)
     self:SetEnabled(true)
   elseif message == "off" then
     self:SetEnabled(false)
+  elseif message == "diagnostics" or message == "debug" then
+    if self.ShowConfigTab then self:ShowConfigTab(4, true) end
   else
     self:Print("Unknown command: " .. message)
     self:ShowCommands()
@@ -203,9 +214,12 @@ events:SetScript("OnEvent", function()
     if OctoPort.config.enabled then
       OctoPort:Print("v" .. OctoPort.version .. " loaded. Type /octoport for help.")
     end
-    if not OctoPort.config.firstRunSeen and OctoPort.ToggleHelp then
+    if (OctoPort.config.bindingVersion or 0) < 3 and OctoPort.ShowConfigTab then
       OctoPort.config.firstRunSeen = true
-      OctoPort:ToggleHelp(true)
+      OctoPort:ShowConfigTab(1, true)
+    elseif not OctoPort.config.firstRunSeen and OctoPort.ToggleConfig then
+      OctoPort.config.firstRunSeen = true
+      OctoPort:ShowConfigTab(1, true)
     end
   end
 end)

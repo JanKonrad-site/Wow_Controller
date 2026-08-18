@@ -23,6 +23,7 @@ jobs:
           test -f Radial.lua
           test -f Quest.lua
           test -f Loot.lua
+          test -f Menu.lua
 
       - name: Build ZIP
         run: |

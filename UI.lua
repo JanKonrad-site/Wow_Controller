@@ -191,6 +191,15 @@ function OctoPort:CreateRoot()
   local hint = MakeText(root, "GameFontDisableSmall", "D-PAD = CILE   A = POTVRDIT   DRZ MENU = KOLO")
   hint:SetPoint("BOTTOM", root, "BOTTOM", 0, 7)
 
+  local settings = CreateFrame("Button", nil, root, "UIPanelButtonTemplate")
+  settings:SetWidth(32)
+  settings:SetHeight(20)
+  settings:SetPoint("TOPRIGHT", root, "TOPRIGHT", -8, -7)
+  settings:SetText("WC")
+  settings:SetScript("OnClick", function()
+    if OctoPort.ToggleConfig then OctoPort:ToggleConfig(true) end
+  end)
+
   local targetName = MakeText(root, "GameFontHighlightSmall", "BEZ CILE")
   targetName:SetPoint("TOPLEFT", root, "TOPLEFT", 12, -10)
   targetName:SetWidth(105)
@@ -217,6 +226,7 @@ function OctoPort:CreateRoot()
   self.hintText = hint
   self.targetNameText = targetName
   self.targetPad = CreateTargetPad(root)
+  self.settingsButton = settings
 
   local hidden = CreateFrame("Frame", "OctoPortHiddenButtons", UIParent)
   hidden:Hide()
@@ -308,8 +318,15 @@ function OctoPort:UpdateBonusButtons(force)
 end
 
 function OctoPort:GetActiveLayer()
-  if IsControlKeyDown and IsControlKeyDown() then return "ctrl" end
-  if IsShiftKeyDown and IsShiftKeyDown() then return "shift" end
+  if self.controllerLayerState then
+    if self.controllerLayerState.ctrl then return "ctrl" end
+    if self.controllerLayerState.shift then return "shift" end
+  end
+
+  local mapping = self.config and self.config.nativeModifiers or { SHIFT = "shift", CTRL = "ctrl" }
+  if IsControlKeyDown and IsControlKeyDown() and mapping.CTRL then return mapping.CTRL end
+  if IsShiftKeyDown and IsShiftKeyDown() and mapping.SHIFT then return mapping.SHIFT end
+  if IsAltKeyDown and IsAltKeyDown() and mapping.ALT then return mapping.ALT end
   return "base"
 end
 
@@ -347,6 +364,8 @@ end
 function OctoPort:HandleControllerAction(slot, keystate)
   self.controllerPressed = self.controllerPressed or {}
   self.contextConsumed = self.contextConsumed or {}
+
+  if self.HandleConfigAction and self:HandleConfigAction(slot, keystate) then return end
 
   if keystate == "down" then
     if self.HandleContextButton and self:HandleContextButton(slot) then
