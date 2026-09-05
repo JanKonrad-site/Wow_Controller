@@ -1,12 +1,11 @@
--- Controller binding registry, presets and diagnostics.
--- WoW 1.12 has no XInput API, so the setup wizard binds the keyboard or mouse
--- signal that the handheld actually sends instead of guessing a device preset.
+-- Safe controller binding registry for WoW 1.12.
+--
+-- The addon stores selected physical keys in SavedVariables, but applies
+-- OCTOPORT_* bindings only to the current UI session. It never calls
+-- SaveBindings during normal setup or play. Original bindings are restored
+-- when the controller is disabled and on PLAYER_LOGOUT.
 
 local bindingDefinitions = {
-  { id = "LSUP",   label = "L-Stick Up",   command = "OCTOPORT_MOVE_FORWARD",  defaultKey = "W",     required = true },
-  { id = "LSDOWN", label = "L-Stick Down", command = "OCTOPORT_MOVE_BACKWARD", defaultKey = "S",     required = true },
-  { id = "LSLEFT", label = "L-Stick Left", command = "OCTOPORT_MOVE_LEFT",     defaultKey = "A",     required = true },
-  { id = "LSRIGHT", label = "L-Stick Right", command = "OCTOPORT_MOVE_RIGHT", defaultKey = "D",     required = true },
   { id = "A",      label = "A",           command = "OCTOPORT_ACTION_A",     defaultKey = "F9",    required = true },
   { id = "B",      label = "B",           command = "OCTOPORT_ACTION_B",     defaultKey = "F10",   required = true },
   { id = "X",      label = "X",           command = "OCTOPORT_ACTION_X",     defaultKey = "F11",   required = true },
@@ -18,24 +17,37 @@ local bindingDefinitions = {
   { id = "MENU",   label = "Menu",        command = "OCTOPORT_RADIAL",       defaultKey = "F8",    required = true },
   { id = "LB",     label = "LB layer",    command = "OCTOPORT_LAYER_LB",     nativeKey = "SHIFT", layer = "shift" },
   { id = "LT",     label = "LT layer",    command = "OCTOPORT_LAYER_LT",     nativeKey = "CTRL",  layer = "ctrl" },
-  { id = "VIEW",   label = "View / Settings", command = "OCTOPORT_OPENCONFIG" },
-  { id = "M1",     label = "Rear M1",     command = "OCTOPORT_REAR_M1" },
-  { id = "M2",     label = "Rear M2",     command = "OCTOPORT_REAR_M2" },
+  { id = "VIEW",   label = "View / Settings", command = "OCTOPORT_OPENCONFIG", defaultKey = "F7" },
+  { id = "M1",     label = "Rear M1",     command = "OCTOPORT_REAR_M1",      defaultKey = "F6" },
+  { id = "M2",     label = "Rear M2",     command = "OCTOPORT_REAR_M2",      defaultKey = "F5" },
+}
+
+-- Commands written by every public version through 0.4.0. Removed commands
+-- remain here so migration can clean them from a saved WoW binding set.
+local legacyCommands = {
+  "OCTOPORT_MOVE_FORWARD",
+  "OCTOPORT_MOVE_BACKWARD",
+  "OCTOPORT_MOVE_LEFT",
+  "OCTOPORT_MOVE_RIGHT",
+  "OCTOPORT_ACTION_A",
+  "OCTOPORT_ACTION_B",
+  "OCTOPORT_ACTION_X",
+  "OCTOPORT_ACTION_Y",
+  "OCTOPORT_RADIAL",
+  "OCTOPORT_TARGET_UP",
+  "OCTOPORT_TARGET_DOWN",
+  "OCTOPORT_TARGET_LEFT",
+  "OCTOPORT_TARGET_RIGHT",
+  "OCTOPORT_LAYER_LB",
+  "OCTOPORT_LAYER_LT",
+  "OCTOPORT_OPENCONFIG",
+  "OCTOPORT_REAR_M1",
+  "OCTOPORT_REAR_M2",
+  "OCTOPORT_TOGGLEBAGS",
+  "OCTOPORT_TOGGLEHELP",
 }
 
 OctoPort.bindingDefinitions = bindingDefinitions
-
-local extraPresetBindings = {
-  { "TAB", "TARGETNEARESTENEMY" },
-  { "SHIFT-TAB", "TARGETPREVIOUSENEMY" },
-  { "CTRL-TAB", "TARGETNEARESTFRIEND" },
-  { "F", "TURNORACTION" },
-  { "R", "OCTOPORT_TOGGLEBAGS" },
-  { "M", "TOGGLEWORLDMAP" },
-  { "SPACE", "JUMP" },
-  { "NUMLOCK", "TOGGLEAUTORUN" },
-  { "ESCAPE", "TOGGLEGAMEMENU" },
-}
 
 local rearActionOrder = { "settings", "interact", "jump", "autorun", "bags", "map", "target", "reticle", "radial" }
 local rearActionLabels = {
@@ -58,11 +70,6 @@ local function CurrentBinding(key)
   return ""
 end
 
-local function IsCustomCommand(command)
-  if not command then return false end
-  return string.sub(command, 1, 9) == "OCTOPORT_"
-end
-
 local function FindDefinition(value)
   for index = 1, table.getn(bindingDefinitions) do
     local definition = bindingDefinitions[index]
@@ -71,54 +78,36 @@ local function FindDefinition(value)
   return nil
 end
 
-function OctoPort:GetBindingDefinition(value)
-  return FindDefinition(value)
+local function IsModifier(key)
+  return key == "SHIFT" or key == "CTRL" or key == "ALT"
 end
 
-function OctoPort:BackupBinding(key)
-  if not key or key == "" then return end
-  self.config.bindingBackup = self.config.bindingBackup or {}
-  if self.config.bindingBackup[key] == nil then
-    local oldAction = CurrentBinding(key)
-    if IsCustomCommand(oldAction) then oldAction = "" end
-    self.config.bindingBackup[key] = oldAction
-  end
-end
-
-function OctoPort:ClearCommandBindings(command, restoreOriginal)
-  local function ClearKey(key)
-    if not key then return end
-    local original = self.config and self.config.bindingBackup and self.config.bindingBackup[key]
-    if restoreOriginal ~= false and original and original ~= "" then
-      SetBinding(key, original)
-    else
-      SetBinding(key)
-    end
-  end
+local function ClearCommand(command)
   local guard = 0
   while guard < 8 do
     local key1, key2 = GetBindingKey(command)
     if not key1 and not key2 then break end
-    ClearKey(key1)
-    ClearKey(key2)
+    if key1 then SetBinding(key1) end
+    if key2 then SetBinding(key2) end
     guard = guard + 1
   end
 end
 
+function OctoPort:GetBindingDefinition(value)
+  return FindDefinition(value)
+end
+
 function OctoPort:GetControllerBindingKey(definition)
   if type(definition) ~= "table" then definition = FindDefinition(definition) end
-  if not definition then return nil end
+  if not definition or not self.config then return nil end
 
-  local key1 = GetBindingKey(definition.command)
-  if key1 then return key1 end
-
-  if definition.layer and self.config and self.config.nativeModifiers then
+  if definition.layer and self.config.nativeModifiers then
     for modifier, layer in pairs(self.config.nativeModifiers) do
       if layer == definition.layer then return modifier .. " (native)" end
     end
   end
 
-  return nil
+  return self.config.controllerKeys and self.config.controllerKeys[definition.id]
 end
 
 function OctoPort:RefreshSetupState()
@@ -131,7 +120,7 @@ function OctoPort:RefreshSetupState()
     end
   end
   self.config.setupComplete = complete
-  if complete then self.config.bindingVersion = 4 end
+  if complete then self.config.bindingVersion = 5 end
   if self.RefreshBindingMenu then self:RefreshBindingMenu() end
   return complete
 end
@@ -141,78 +130,140 @@ function OctoPort:BindControllerKey(definition, key)
   if not definition or not key or key == "" or key == "UNKNOWN" then return false end
   if not self.config then self:InitializeConfig() end
 
-  if definition.layer and (key == "SHIFT" or key == "CTRL" or key == "ALT") then
-    self:ClearCommandBindings(definition.command)
+  self.config.controllerKeys = self.config.controllerKeys or {}
+  self.config.nativeModifiers = self.config.nativeModifiers or {}
+
+  -- One physical key may own only one controller action.
+  for id, configuredKey in pairs(self.config.controllerKeys) do
+    if configuredKey == key then self.config.controllerKeys[id] = nil end
+  end
+
+  if definition.layer and IsModifier(key) then
     for modifier, layer in pairs(self.config.nativeModifiers) do
-      if layer == definition.layer then self.config.nativeModifiers[modifier] = nil end
+      if layer == definition.layer or modifier == key then
+        self.config.nativeModifiers[modifier] = nil
+      end
     end
     self.config.nativeModifiers[key] = definition.layer
+    self.config.controllerKeys[definition.id] = nil
   else
-    self:BackupBinding(key)
-    self:ClearCommandBindings(definition.command)
     if definition.layer then
       for modifier, layer in pairs(self.config.nativeModifiers) do
         if layer == definition.layer then self.config.nativeModifiers[modifier] = nil end
       end
     end
-    if not SetBinding(key, definition.command) then return false end
+    self.config.controllerKeys[definition.id] = key
   end
 
-  SaveBindings(GetCurrentBindingSet())
+  -- Refresh only the temporary session. Normal setup never writes WoW's
+  -- account/character binding set to disk or server.
+  if self.config.enabled then self:ActivateSessionBindings() end
   self:RefreshSetupState()
   return true
 end
 
 function OctoPort:ApplyRecommendedBindings()
   if not self.config then self:InitializeConfig() end
+  self.config.controllerKeys = {}
   self.config.nativeModifiers = { SHIFT = "shift", CTRL = "ctrl" }
 
-  local failed = 0
   for index = 1, table.getn(bindingDefinitions) do
     local definition = bindingDefinitions[index]
-    self:ClearCommandBindings(definition.command)
-    if definition.defaultKey then
-      self:BackupBinding(definition.defaultKey)
-      if not SetBinding(definition.defaultKey, definition.command) then failed = failed + 1 end
+    if definition.defaultKey and not definition.layer then
+      self.config.controllerKeys[definition.id] = definition.defaultKey
     end
   end
 
-  for index = 1, table.getn(extraPresetBindings) do
-    local key = extraPresetBindings[index][1]
-    self:BackupBinding(key)
-    if not SetBinding(key, extraPresetBindings[index][2]) then failed = failed + 1 end
-  end
-
-  SaveBindings(GetCurrentBindingSet())
+  self.config.bindingVersion = 5
   self:RefreshSetupState()
-
-  if failed == 0 then
-    self:Print("ROG Ally legacy preset applied. Use Controller > Diagnostics to test every input.")
-  else
-    self:Print("Could not apply " .. failed .. " bindings. Try again outside combat.")
-  end
+  if self.config.enabled then self:ActivateSessionBindings() end
+  self:Print("Safe ROG Ally profile selected. It is session-only and does not overwrite saved WoW bindings.")
 end
 
-function OctoPort:RestoreBindings()
-  if not self.config or not self.config.bindingBackup then
-    self:Print("No WOW Controller binding backup exists for this character.")
+function OctoPort:DeactivateSessionBindings()
+  if not self.sessionBindingBackup then
+    self.sessionBindingsActive = false
     return
   end
 
-  for index = 1, table.getn(bindingDefinitions) do
-    self:ClearCommandBindings(bindingDefinitions[index].command, false)
+  for index = 1, table.getn(legacyCommands) do
+    ClearCommand(legacyCommands[index])
   end
-
-  for key, command in pairs(self.config.bindingBackup) do
+  for key, command in pairs(self.sessionBindingBackup) do
     if command and command ~= "" then SetBinding(key, command) else SetBinding(key) end
   end
 
+  self.sessionBindingBackup = nil
+  self.sessionBindingsActive = false
+end
+
+function OctoPort:ActivateSessionBindings()
+  if not self.config or not self.config.enabled then return false end
+  self:DeactivateSessionBindings()
+  self.sessionBindingBackup = {}
+
+  local applied = 0
+  for index = 1, table.getn(bindingDefinitions) do
+    local definition = bindingDefinitions[index]
+    local key = self.config.controllerKeys and self.config.controllerKeys[definition.id]
+    if key and key ~= "" then
+      if self.sessionBindingBackup[key] == nil then
+        self.sessionBindingBackup[key] = CurrentBinding(key)
+      end
+      if SetBinding(key, definition.command) then applied = applied + 1 end
+    end
+  end
+
+  self.sessionBindingsActive = applied > 0
+  return self.sessionBindingsActive
+end
+
+local function CaptureLegacyControllerKeys(config)
+  config.controllerKeys = config.controllerKeys or {}
+  for index = 1, table.getn(bindingDefinitions) do
+    local definition = bindingDefinitions[index]
+    local key = GetBindingKey(definition.command)
+    if key and not config.controllerKeys[definition.id] and not IsModifier(key) then
+      config.controllerKeys[definition.id] = key
+    end
+  end
+end
+
+function OctoPort:RecoverLegacyBindings(force)
+  if not self.config then return false end
+  if not force and not self.needsSafetyMigration then return false end
+
+  CaptureLegacyControllerKeys(self.config)
+
+  -- First remove every custom command, including movement commands deleted in
+  -- 0.5.0. Then restore exact pre-addon actions captured by old releases.
+  for index = 1, table.getn(legacyCommands) do
+    ClearCommand(legacyCommands[index])
+  end
+  if self.config.bindingBackup then
+    for key, command in pairs(self.config.bindingBackup) do
+      if command and command ~= "" then SetBinding(key, command) else SetBinding(key) end
+    end
+  end
+
+  -- This is the only persistent binding write: it repairs damage created by
+  -- versions that used SaveBindings during setup.
   SaveBindings(GetCurrentBindingSet())
   self.config.bindingBackup = nil
-  self.config.setupComplete = false
+  self.config.safetyVersion = 1
   self.config.bindingVersion = 0
-  self.config.nativeModifiers = { SHIFT = "shift", CTRL = "ctrl" }
-  self:Print("Original bindings restored.")
+  self.config.setupComplete = false
+  self.config.enabled = false
+  self.needsSafetyMigration = false
+  return true
+end
+
+function OctoPort:RestoreBindings()
+  self.config.enabled = false
+  self:DeactivateSessionBindings()
+  self:RecoverLegacyBindings(true)
+  if self.SetUIEnabled then self:SetUIEnabled(false) end
+  self:Print("Emergency cleanup complete. Saved OCTOPORT bindings were removed and the addon is OFF.")
   if self.RefreshBindingMenu then self:RefreshBindingMenu() end
 end
 
@@ -221,36 +272,6 @@ function OctoPort:SignalInput(id, state)
   self.lastControllerInputState = state or "press"
   self.lastControllerInputAt = GetTime()
   if self.UpdateInputDiagnostics then self:UpdateInputDiagnostics() end
-end
-
-function OctoPort_Move(direction, keystate)
-  if not OctoPort then return end
-  local ids = { forward = "LSUP", backward = "LSDOWN", left = "LSLEFT", right = "LSRIGHT" }
-  OctoPort:SignalInput(ids[direction], keystate)
-  if OctoPort.bindingCaptureActive then return end
-
-  local startFunctions = {
-    forward = MoveForwardStart,
-    backward = MoveBackwardStart,
-    left = StrafeLeftStart,
-    right = StrafeRightStart,
-  }
-  local stopFunctions = {
-    forward = MoveForwardStop,
-    backward = MoveBackwardStop,
-    left = StrafeLeftStop,
-    right = StrafeRightStop,
-  }
-
-  if keystate ~= "down" then
-    if stopFunctions[direction] then stopFunctions[direction]() end
-    return
-  end
-
-  local menuDirection = { forward = "up", backward = "down", left = "left", right = "right" }
-  if OctoPort.HandleRadialDirection and OctoPort:HandleRadialDirection(menuDirection[direction]) then return end
-  if OctoPort.HandleConfigDirection and OctoPort:HandleConfigDirection(menuDirection[direction]) then return end
-  if startFunctions[direction] then startFunctions[direction]() end
 end
 
 function OctoPort:GetRearActionLabel(button)
@@ -272,7 +293,8 @@ function OctoPort:CycleRearAction(button)
 end
 
 function OctoPort:HandleRearAction(button, keystate)
-  local action = self.config and self.config.rearActions and self.config.rearActions[button]
+  if not self.config or not self.config.enabled then return end
+  local action = self.config.rearActions and self.config.rearActions[button]
   if not action then action = button == "M1" and "settings" or "interact" end
 
   if action == "interact" then
@@ -314,19 +336,14 @@ end
 function OctoPort_ActionKey(slot, keystate)
   local ids = { "A", "B", "X", "Y" }
   if OctoPort then OctoPort:SignalInput(ids[slot], keystate) end
-  if OctoPort and OctoPort.bindingCaptureActive then return end
-  if OctoPort and OctoPort.HandleControllerAction then
-    OctoPort:HandleControllerAction(slot, keystate)
-  elseif keystate ~= "down" and ActionButtonUp then
-    ActionButtonUp(slot)
-  elseif keystate == "down" and ActionButtonDown then
-    ActionButtonDown(slot)
-  end
+  if not OctoPort or not OctoPort.config or not OctoPort.config.enabled then return end
+  if OctoPort.bindingCaptureActive then return end
+  if OctoPort.HandleControllerAction then OctoPort:HandleControllerAction(slot, keystate) end
 end
 
 function OctoPort_RadialKey(keystate)
   if OctoPort then OctoPort:SignalInput("MENU", keystate) end
-  if OctoPort and not OctoPort.bindingCaptureActive and OctoPort.HandleRadialKey then
+  if OctoPort and OctoPort.config and OctoPort.config.enabled and not OctoPort.bindingCaptureActive and OctoPort.HandleRadialKey then
     OctoPort:HandleRadialKey(keystate)
   end
 end
@@ -334,7 +351,7 @@ end
 function OctoPort_Target(direction)
   local ids = { up = "DUP", down = "DDOWN", left = "DLEFT", right = "DRIGHT" }
   if OctoPort then OctoPort:SignalInput(ids[direction]) end
-  if not OctoPort or OctoPort.bindingCaptureActive then return end
+  if not OctoPort or not OctoPort.config or not OctoPort.config.enabled or OctoPort.bindingCaptureActive then return end
 
   if OctoPort.HandleRadialDirection and OctoPort:HandleRadialDirection(direction) then return end
   if OctoPort.HandleConfigDirection and OctoPort:HandleConfigDirection(direction) then return end
@@ -353,7 +370,7 @@ function OctoPort_Target(direction)
 end
 
 function OctoPort_LayerKey(layer, keystate)
-  if not OctoPort then return end
+  if not OctoPort or not OctoPort.config or not OctoPort.config.enabled then return end
   OctoPort.controllerLayerState = OctoPort.controllerLayerState or {}
   OctoPort.controllerLayerState[layer] = keystate == "down" and true or false
   OctoPort:SignalInput(layer == "shift" and "LB" or "LT", keystate)

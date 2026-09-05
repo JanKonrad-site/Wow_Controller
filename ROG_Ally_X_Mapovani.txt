@@ -1,17 +1,17 @@
-WOW CONTROLLER 0.4.0 - ROG ALLY X / ARMOURY CRATE SE
+WOW CONTROLLER 0.5.0 - ROG ALLY X / ARMOURY CRATE SE
 ================================================
 
 RYCHLY START
 ------------
 1. Aktualizuj addon v OctoLauncheru a spust hru.
 2. V Command Centeru nastav CONTROL MODE = DESKTOP (ne Auto ani Gamepad).
-3. Ve hre napis /wc a zvol SPUSTIT PRUVODCE.
-4. Postupne pohni levou packou ve 4 smerech a stiskni pozadovana tlacitka.
+3. Po aktualizaci z 0.1-0.4 addon jednou opravi stare ulozene bindy a zustane OFF.
+4. Ve hre napis /wc a zvol ROG ALLY PROFIL nebo SPUSTIT PRUVODCE.
 5. View, LB, LT, M1 a M2 jsou volitelne; lze je v pruvodci preskocit.
-6. V DIAGNOSTICE over tlacitka i pohyb prave packy jako R-Stick / Mouse.
+6. Zvol ZAPNOUT BEZPECNE a v DIAGNOSTICE over tlacitka i pravou packu.
 
-Klient WoW 1.12 neumi XInput, proto Gamepad Mode nefunguje. Addon zachyti
-skutecnou klavesu nebo klik,
+Klient WoW 1.12 neumi XInput, proto Gamepad Mode nefunguje. Leva packa zustava
+primo W/A/S/D a prava packa mysi. Addon zachyti skutecnou klavesu nebo klik,
 ktery Armoury Crate posila. Pokud se pruvodce po stisku neposune, dane tlacitko
 neposila do WoW zadny klavesnicovy/mysi signal. V hernim Desktop Mode profilu mu
 prirad libovolnou nepouzitou klavesu a zkus stisk znovu.
@@ -30,29 +30,31 @@ M2                Libovolna klavesa    Nastavitelna akce (vychozi interakce)
 U M1/M2 vypni v Armoury Crate volbu Set as Secondary Function. Tlacitka Command
 Center a Armoury Crate jsou systemova a nelze je premapovat ani zachytit addonem.
 
-STARY PRESET (JEN ZALOHA)
--------------------------
+BEZPECNY PROFIL
+---------------
 A/B/X/Y           F9/F10/F11/F12
 D-pad             Sipky
 Menu              F8
 LB/LT             Shift/Ctrl
+View              F7
+M1/M2             F6/F5
 
-Pouzij tlacitko ROG ALLY PRESET nebo prikaz /octoport preset. Pro bezne nastaveni
-je presnejsi novy pruvodce.
+Pouzij tlacitko ROG ALLY PROFIL nebo prikaz /octoport preset. Profil se aktivuje
+jen pro aktualni relaci a pri vypnuti nebo odhlaseni vrati puvodni bindy.
 
 OVLADANI VE HRE
 ---------------
 /wc                         Controller menu
 /octoport setup             Pruvodce mapovanim
 /octoport diagnostics       Zivy test vstupu
-/octoport preset            Stary F8-F12 preset
-/octoport restore           Obnovit puvodni bindy
+/octoport preset            Bezpecny session-only profil
+/octoport restore           Nouzove vycistit bindy a addon vypnout
 /octoport wheel             Editor radialniho kola
 
 V Controller menu meni D-pad vlevo/vpravo zalozku, nahoru/dolu vyber, A potvrdi
 a B zavre. Ve hre D-pad nahoru/dolu prepina pratele a vlevo/vpravo nepritele.
 Podrzenim Menu se otevre radialni kolo; smer vyber pravou packou nebo D-padem.
-Leva packa ovlada pohyb. Zamerovac uprostred je cerveny pro nepritele, zeleny
+Leva packa ovlada pohyb pres nativni W/A/S/D. Zamerovac uprostred je cerveny pro nepritele, zeleny
 pro pratele a ukazuje zdravi cile. Akce M1/M2 zmenis v zalozce HRANI.
 
 BEZPECNOST HESLA

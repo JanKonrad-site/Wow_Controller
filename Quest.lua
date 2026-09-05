@@ -10,7 +10,7 @@ questAutomation:RegisterEvent("QUEST_FINISHED")
 
 questAutomation:SetScript("OnEvent", function()
   if event == "QUEST_DETAIL" then
-    if OctoPort.config and OctoPort.config.autoAcceptQuests then
+    if OctoPort.config and OctoPort.config.enabled and OctoPort.config.autoAcceptQuests then
       -- Holding LB/Shift is the temporary manual-review override.
       if IsShiftKeyDown and IsShiftKeyDown() then
         this.pendingAccept = nil
