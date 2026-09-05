@@ -73,7 +73,7 @@ end
 function OctoPort:UpdateReticle(force)
   if not self.reticleFrame or not self.config then return end
 
-  if not self.config.reticleEnabled or (self.configFrame and self.configFrame:IsVisible()) then
+  if not self.config.enabled or not self.config.reticleEnabled or (self.configFrame and self.configFrame:IsVisible()) then
     self.reticleFrame:Hide()
     return
   end

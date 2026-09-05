@@ -1,8 +1,8 @@
--- OctoPort 0.4.0
+-- WOW Controller 0.5.0
 -- Controller-first interface for OctoWoW / World of Warcraft 1.12.x.
 
 OctoPort = OctoPort or {}
-OctoPort.version = "0.4.0"
+OctoPort.version = "0.5.0"
 
 BINDING_HEADER_OCTOPORT = "WOW Controller"
 BINDING_NAME_OCTOPORT_TOGGLEBAGS = "Open / close all bags"
@@ -19,10 +19,6 @@ BINDING_NAME_OCTOPORT_TARGET_RIGHT = "Next enemy target"
 BINDING_NAME_OCTOPORT_LAYER_LB = "Controller LB action layer"
 BINDING_NAME_OCTOPORT_LAYER_LT = "Controller LT action layer"
 BINDING_NAME_OCTOPORT_OPENCONFIG = "Open WOW Controller settings"
-BINDING_NAME_OCTOPORT_MOVE_FORWARD = "Left stick forward"
-BINDING_NAME_OCTOPORT_MOVE_BACKWARD = "Left stick backward"
-BINDING_NAME_OCTOPORT_MOVE_LEFT = "Left stick strafe left"
-BINDING_NAME_OCTOPORT_MOVE_RIGHT = "Left stick strafe right"
 BINDING_NAME_OCTOPORT_REAR_M1 = "ROG Ally rear paddle M1"
 BINDING_NAME_OCTOPORT_REAR_M2 = "ROG Ally rear paddle M2"
 
@@ -38,7 +34,9 @@ local defaultRadialSlots = {
 }
 
 local defaults = {
-  enabled = true,
+  -- Installation must be inert until the player explicitly enables it.
+  enabled = false,
+  safetyVersion = 1,
   scale = 1.00,
   x = 0,
   y = 122,
@@ -48,14 +46,15 @@ local defaults = {
   bindingVersion = 0,
   firstRunSeen = false,
   bindingBackup = nil,
-  autoTarget = true,
-  autoAcceptQuests = true,
+  controllerKeys = {},
+  autoTarget = false,
+  autoAcceptQuests = false,
   radialHold = 0.35,
   radialSlots = defaultRadialSlots,
   mountName = "",
   nativeModifiers = { SHIFT = "shift", CTRL = "ctrl" },
   selectedConfigTab = 1,
-  reticleEnabled = true,
+  reticleEnabled = false,
   reticleScale = 1.00,
   rearActions = { M1 = "settings", M2 = "interact" },
 }
@@ -84,16 +83,27 @@ function OctoPort:Print(message)
 end
 
 function OctoPort:InitializeConfig()
+  local hadExistingConfig = type(OctoPortConfig) == "table"
   OctoPortConfig = OctoPortConfig or {}
+  local previousSafetyVersion = tonumber(OctoPortConfig.safetyVersion) or 0
   CopyDefaults(OctoPortConfig, defaults)
   self.config = OctoPortConfig
+  self.needsSafetyMigration = hadExistingConfig and previousSafetyVersion < defaults.safetyVersion
+  if self.needsSafetyMigration then
+    -- Versions through 0.4.0 saved custom commands permanently and modified
+    -- Blizzard action buttons automatically. Stop all features before cleanup.
+    self.config.enabled = false
+    self.config.autoTarget = false
+    self.config.autoAcceptQuests = false
+    self.config.reticleEnabled = false
+  end
 end
 
 function OctoPort:ShowCommands()
   self:Print("/octoport - open controller settings")
   self:Print("/octoport setup - start the controller binding wizard")
-  self:Print("/octoport preset - apply the legacy ROG Ally F-key preset")
-  self:Print("/octoport restore - restore bindings saved before setup")
+  self:Print("/octoport preset - apply safe session-only ROG Ally keys")
+  self:Print("/octoport restore - disable addon and restore original bindings")
   self:Print("/octoport edit - show all three action layers")
   self:Print("/octoport move - unlock or lock the controller HUD")
   self:Print("/octoport scale 0.7-1.6 - resize the HUD")
@@ -118,12 +128,17 @@ end
 
 function OctoPort:SetEnabled(enabled)
   self.config.enabled = enabled and true or false
+  if self.config.enabled then
+    if self.ActivateSessionBindings then self:ActivateSessionBindings() end
+  elseif self.DeactivateSessionBindings then
+    self:DeactivateSessionBindings()
+  end
   if self.SetUIEnabled then
     self:SetUIEnabled(self.config.enabled)
   elseif self.root then
     if self.config.enabled then self.root:Show() else self.root:Hide() end
   end
-  self:Print(self.config.enabled and "HUD enabled." or "HUD hidden.")
+  self:Print(self.config.enabled and "Safe controller session enabled." or "Controller disabled; original bindings restored.")
 end
 
 local function Trim(text)
@@ -223,21 +238,32 @@ end
 local events = CreateFrame("Frame", "OctoPortEvents")
 events:RegisterEvent("ADDON_LOADED")
 events:RegisterEvent("PLAYER_LOGIN")
+events:RegisterEvent("PLAYER_LOGOUT")
 events:SetScript("OnEvent", function()
   if event == "ADDON_LOADED" and (arg1 == "Wow_Controller" or arg1 == "OctoPort") then
     OctoPort:InitializeConfig()
   elseif event == "PLAYER_LOGIN" then
     if not OctoPort.config then OctoPort:InitializeConfig() end
+    local migrated = false
+    if OctoPort.RecoverLegacyBindings then migrated = OctoPort:RecoverLegacyBindings() end
     if OctoPort.InitializeUI then OctoPort:InitializeUI() end
     if OctoPort.config.enabled then
+      if OctoPort.ActivateSessionBindings then OctoPort:ActivateSessionBindings() end
       OctoPort:Print("v" .. OctoPort.version .. " loaded. Type /octoport for help.")
     end
-    if (OctoPort.config.bindingVersion or 0) < 4 and OctoPort.ShowConfigTab then
+    if migrated and OctoPort.ShowConfigTab then
+      OctoPort.config.firstRunSeen = true
+      OctoPort:Print("Unsafe bindings from an older version were removed. The addon is OFF until you enable it again.")
+      OctoPort:ShowConfigTab(1, true)
+    elseif (OctoPort.config.bindingVersion or 0) < 5 and OctoPort.ShowConfigTab then
       OctoPort.config.firstRunSeen = true
       OctoPort:ShowConfigTab(1, true)
     elseif not OctoPort.config.firstRunSeen and OctoPort.ToggleConfig then
       OctoPort.config.firstRunSeen = true
       OctoPort:ShowConfigTab(1, true)
     end
+  elseif event == "PLAYER_LOGOUT" then
+    -- Never leave OCTOPORT_* commands active after the addon stops running.
+    if OctoPort.DeactivateSessionBindings then OctoPort:DeactivateSessionBindings() end
   end
 end)

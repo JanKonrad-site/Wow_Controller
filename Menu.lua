@@ -353,7 +353,7 @@ local function BuildSetupPanel(panel)
   title:SetTextColor(0.24, 0.84, 0.81)
 
   local body = MakeLabel(panel, "GameFontHighlightSmall",
-    "DULEZITE: pro OctoWoW nastav v Command Centeru CONTROL MODE = DESKTOP. Klient 1.12 nevidi XInput z Gamepad Mode. Pruvodce zachyti levou packu jako W/A/S/D, tlacitka jako klavesy a prava packa zustane mysi.", 470)
+    "BEZPECNY REZIM: instalace nic nemeni sama. Klavesy ovladace se pouziji jen po zapnuti a jen pro aktualni relaci; pri vypnuti nebo odhlaseni se puvodni vazby vrati. V Armoury Crate nastav CONTROL MODE = DESKTOP, levou packu na W/A/S/D a pravou na mys.", 470)
   body:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -16)
   body:SetJustifyH("LEFT")
   body:SetJustifyV("TOP")
@@ -372,7 +372,7 @@ local function BuildSetupPanel(panel)
   end))
   controls:SetPoint("LEFT", wizard, "RIGHT", 10, 0)
 
-  local preset = AddFocusable(panel, MakeButton(panel, "ROG ALLY PRESET", 150, function()
+  local preset = AddFocusable(panel, MakeButton(panel, "ROG ALLY PROFIL", 150, function()
     OctoPort:ApplyRecommendedBindings()
   end))
   preset:SetPoint("TOPLEFT", wizard, "BOTTOMLEFT", 0, -12)
@@ -382,10 +382,20 @@ local function BuildSetupPanel(panel)
   end))
   restore:SetPoint("LEFT", preset, "RIGHT", 10, 0)
 
+  local enable = AddFocusable(panel, MakeButton(panel, "ZAPNOUT BEZPECNE", 310, function()
+    OctoPort:SetEnabled(not OctoPort.config.enabled)
+    this:SetText(OctoPort.config.enabled and "VYPNOUT A OBNOVIT BINDY" or "ZAPNOUT BEZPECNE")
+  end))
+  enable:SetPoint("TOPLEFT", preset, "BOTTOMLEFT", 0, -12)
+
   local note = MakeLabel(panel, "GameFontDisableSmall",
-    "M1/M2: v Armoury Crate vypni Set as Secondary Function a prirad jim vlastni klavesy. View lze pouzit pro nastaveni. Command Center a Armoury Crate tlacitka jsou systemova a ASUS je nepovoluje premapovat.", 470)
-  note:SetPoint("TOPLEFT", preset, "BOTTOMLEFT", 0, -28)
+    "Addon uz nepresouva Blizzard action buttony, neprepisuje globalni FrameXML funkce a pri beznem hrani nikdy nevola SaveBindings. M1/M2 prirad v Armoury Crate vlastnim klavesam.", 470)
+  note:SetPoint("TOPLEFT", enable, "BOTTOMLEFT", 0, -18)
   note:SetJustifyH("LEFT")
+
+  panel:SetScript("OnShow", function()
+    enable:SetText(OctoPort.config.enabled and "VYPNOUT A OBNOVIT BINDY" or "ZAPNOUT BEZPECNE")
+  end)
 end
 
 local function BuildControlsPanel(panel)

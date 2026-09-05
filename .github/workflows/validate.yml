@@ -17,8 +17,21 @@ jobs:
       - name: Check Lua syntax
         run: luac5.1 -p Core.lua Bindings.lua UI.lua Reticle.lua Radial.lua Quest.lua Loot.lua Menu.lua
 
+      - name: Test binding recovery and session restore
+        run: lua5.1 tests/safety_harness.lua
+
       - name: Check bindings XML
         run: xmllint --noout Bindings.xml
+
+      - name: Check safety invariants
+        run: |
+          test "$(grep -Ec '^[[:space:]]*SaveBindings\(' Bindings.lua)" -eq 1
+          grep -q 'function OctoPort:RecoverLegacyBindings' Bindings.lua
+          grep -q 'RegisterEvent("PLAYER_LOGOUT")' Core.lua
+          ! grep -REn 'ActionButton_GetPagedID[[:space:]]*=' --include='*.lua' .
+          ! grep -REn 'UIParent_ManageFramePositions[[:space:]]*=' --include='*.lua' .
+          ! grep -REn 'SetParent\(' UI.lua
+          ! grep -q 'OCTOPORT_MOVE_' Bindings.xml
 
       - name: Check OctoLauncher layout
         run: |

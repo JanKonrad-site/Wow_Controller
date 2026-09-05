@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0
+
+- Added a one-time migration that removes persisted `OCTOPORT_*` commands and restores bindings captured before versions 0.1-0.4 changed them.
+- Changed normal setup and play to session-only bindings; `SaveBindings` is now used only by explicit legacy/emergency recovery.
+- Added automatic restoration of temporary bindings when the addon is disabled and on `PLAYER_LOGOUT`.
+- Removed the global `ActionButton_GetPagedID` and `UIParent_ManageFramePositions` replacements.
+- Stopped reparenting or hiding Blizzard action buttons; the controller HUD now uses independent read-only mirror frames.
+- Changed fresh-install defaults to OFF, with auto-target, auto-quest and reticle also OFF until explicitly enabled.
+- Removed addon ownership of W/A/S/D; left-stick movement stays on the native Armoury Crate keyboard mapping.
+- Added static CI safety checks against persistent normal-play bindings and global FrameXML replacement.
+- Documented why the current and `legacy` ConsolePort branches cannot run on interface 11200.
+
 ## 0.4.0
 
 - Added required left-stick setup for forward, backward and strafe movement using the signals emitted by ROG Ally Desktop Mode.

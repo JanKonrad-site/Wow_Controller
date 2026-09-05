@@ -1,7 +1,8 @@
--- Cross-hotbar style HUD built from the original 1.12 action buttons.
--- No spell is cast by Lua. Every action still comes from a real key press.
-
-local _G = _G or getfenv(0)
+-- Non-invasive controller HUD for WoW 1.12.
+--
+-- This file deliberately does not reparent Blizzard action buttons and does
+-- not replace global FrameXML functions. The HUD mirrors action-slot state in
+-- its own frames; real actions still execute only after a controller keypress.
 
 local buttonLayout = {
   [1] = { 128, -40, "A", 0.20, 0.90, 0.25 },
@@ -18,9 +19,9 @@ local targetLayout = {
 }
 
 local layerDefinitions = {
-  base  = { title = "ZAKLAD", modifier = "",      framePrefix = "ActionButton" },
-  shift = { title = "LB",     modifier = "SHIFT", framePrefix = "MultiBarBottomLeftButton" },
-  ctrl  = { title = "LT",     modifier = "CTRL",  framePrefix = "MultiBarBottomRightButton" },
+  base  = { title = "ZAKLAD" },
+  shift = { title = "LB" },
+  ctrl  = { title = "LT" },
 }
 
 local function MakeText(parent, template, text)
@@ -29,71 +30,50 @@ local function MakeText(parent, template, text)
   return label
 end
 
-local function SaveButtonState(button)
-  if not button or OctoPort.originalButtons[button] then return end
-  local point, relativeTo, relativePoint, x, y = button:GetPoint(1)
-  local hotkey = _G[button:GetName() .. "HotKey"]
-  OctoPort.originalButtons[button] = {
-    parent = button:GetParent(),
-    scale = button:GetScale(),
-    alpha = button:GetAlpha(),
-    shown = button:IsShown(),
-    point = point,
-    relativeTo = relativeTo,
-    relativePoint = relativePoint,
-    x = x,
-    y = y,
-    hotkeyShown = hotkey and hotkey:IsShown(),
-  }
+local function MakeBackdrop(frame, borderRed, borderGreen, borderBlue)
+  frame:SetBackdrop({
+    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Buttons\\UI-Quickslot2",
+    tile = true,
+    tileSize = 8,
+    edgeSize = 12,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 },
+  })
+  frame:SetBackdropColor(0.025, 0.04, 0.055, 0.94)
+  frame:SetBackdropBorderColor(borderRed or 0.50, borderGreen or 0.56, borderBlue or 0.60, 0.92)
 end
 
-local function AddBadge(button, slot)
-  if not button then return end
-  if button.octoBadge then
-    button.octoBadge:Show()
-    local existingHotkey = _G[button:GetName() .. "HotKey"]
-    if existingHotkey then existingHotkey:Hide() end
-    return
-  end
+local function CreateMirrorButton(parent, slot)
   local data = buttonLayout[slot]
-  if not data then return end
-
-  local badge = CreateFrame("Frame", nil, button)
-  badge:SetWidth(19)
-  badge:SetHeight(19)
-  badge:SetPoint("TOPRIGHT", button, "TOPRIGHT", 5, 5)
-  badge:SetFrameLevel(button:GetFrameLevel() + 5)
-
-  local texture = badge:CreateTexture(nil, "ARTWORK")
-  texture:SetAllPoints(badge)
-  texture:SetTexture("Interface\\Buttons\\UI-Quickslot2")
-  texture:SetVertexColor(data[4], data[5], data[6])
-
-  local text = MakeText(badge, "GameFontNormalSmall", data[3])
-  text:SetPoint("CENTER", badge, "CENTER", 0, 1)
-  text:SetTextColor(data[4], data[5], data[6])
-
-  badge.texture = texture
-  badge.text = text
-  button.octoBadge = badge
-
-  local hotkey = _G[button:GetName() .. "HotKey"]
-  if hotkey then hotkey:Hide() end
-end
-
-local function SetButtonPoint(button, parent, slot, actionSlot)
-  if not button or not buttonLayout[slot] then return end
-  local data = buttonLayout[slot]
-  SaveButtonState(button)
-  button.octoActionSlot = actionSlot
-  button:SetParent(parent)
-  button:ClearAllPoints()
+  local button = CreateFrame("Frame", nil, parent)
+  button:SetWidth(42)
+  button:SetHeight(42)
   button:SetPoint("CENTER", parent, "CENTER", data[1], data[2])
-  button:SetScale(1.08)
-  button:SetAlpha(1)
-  AddBadge(button, slot)
-  local hotkey = _G[button:GetName() .. "HotKey"]
-  if hotkey then hotkey:Hide() end
+  MakeBackdrop(button, data[4], data[5], data[6])
+
+  local icon = button:CreateTexture(nil, "ARTWORK")
+  icon:SetPoint("TOPLEFT", button, "TOPLEFT", 5, -5)
+  icon:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -5, 5)
+  icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+
+  local shade = button:CreateTexture(nil, "OVERLAY")
+  shade:SetAllPoints(icon)
+  shade:SetTexture("Interface\\Buttons\\WHITE8X8")
+  shade:SetVertexColor(0, 0, 0, 0)
+
+  local glyph = MakeText(button, "GameFontNormalSmall", data[3])
+  glyph:SetPoint("TOPRIGHT", button, "TOPRIGHT", 3, 4)
+  glyph:SetTextColor(data[4], data[5], data[6])
+
+  local count = MakeText(button, "NumberFontNormalSmall", "")
+  count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -3, 3)
+
+  button.icon = icon
+  button.shade = shade
+  button.glyph = glyph
+  button.count = count
+  button.slot = slot
+  return button
 end
 
 local function CreateTargetPad(parent)
@@ -108,16 +88,7 @@ local function CreateTargetPad(parent)
     node:SetWidth(34)
     node:SetHeight(34)
     node:SetPoint("CENTER", pad, "CENTER", data.x, data.y)
-    node:SetBackdrop({
-      bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
-      edgeFile = "Interface\\Buttons\\UI-Quickslot2",
-      tile = true,
-      tileSize = 8,
-      edgeSize = 12,
-      insets = { left = 3, right = 3, top = 3, bottom = 3 },
-    })
-    node:SetBackdropColor(0.05, 0.08, 0.10, 0.94)
-    node:SetBackdropBorderColor(0.72, 0.78, 0.82, 0.90)
+    MakeBackdrop(node, 0.72, 0.78, 0.82)
 
     local glyph = MakeText(node, "GameFontNormal", data.glyph)
     glyph:SetPoint("CENTER", node, "CENTER", 0, 1)
@@ -128,8 +99,6 @@ local function CreateTargetPad(parent)
       caption:SetPoint("BOTTOM", node, "TOP", 0, 1)
     elseif data.direction == "down" then
       caption:SetPoint("TOP", node, "BOTTOM", 0, -1)
-    elseif data.direction == "left" then
-      caption:SetPoint("LEFT", node, "RIGHT", 3, 0)
     else
       caption:SetPoint("LEFT", node, "RIGHT", 3, 0)
     end
@@ -141,12 +110,29 @@ local function CreateTargetPad(parent)
   return pad
 end
 
+local function GetBaseActionSlot(slot)
+  local page = CURRENT_ACTIONBAR_PAGE or 1
+  if page == 1 and GetBonusBarOffset then
+    local offset = GetBonusBarOffset() or 0
+    if offset > 0 then
+      page = (NUM_ACTIONBAR_PAGES or 6) + offset
+    elseif BonusActionBarFrame and BonusActionBarFrame.lastBonusBar then
+      page = (NUM_ACTIONBAR_PAGES or 6) + BonusActionBarFrame.lastBonusBar
+    end
+  end
+  return slot + ((page - 1) * (NUM_ACTIONBAR_BUTTONS or 12))
+end
+
+function OctoPort:GetActionSlot(layerName, slot)
+  if layerName == "shift" then return 60 + slot end
+  if layerName == "ctrl" then return 48 + slot end
+  return GetBaseActionSlot(slot)
+end
+
 function OctoPort:CreateRoot()
   if self.root then return end
 
-  self.originalButtons = self.originalButtons or {}
   self.layers = {}
-
   local root = CreateFrame("Frame", "OctoPortHUD", UIParent)
   root:SetWidth(400)
   root:SetHeight(150)
@@ -210,13 +196,10 @@ function OctoPort:CreateRoot()
     layer:SetWidth(390)
     layer:SetHeight(100)
     layer:SetPoint("CENTER", root, "CENTER", 0, 0)
-
-    local layerLabel = MakeText(layer, "GameFontNormalSmall", definition.title)
-    layerLabel:SetPoint("LEFT", layer, "LEFT", 8, 0)
-    layerLabel:SetTextColor(0.24, 0.84, 0.81)
-    layer.layerLabel = layerLabel
     layer.buttons = {}
-
+    for slot = 1, 4 do
+      layer.buttons[slot] = CreateMirrorButton(layer, slot)
+    end
     self.layers[key] = layer
   end
 
@@ -228,93 +211,14 @@ function OctoPort:CreateRoot()
   self.targetPad = CreateTargetPad(root)
   self.settingsButton = settings
 
-  local hidden = CreateFrame("Frame", "OctoPortHiddenButtons", UIParent)
-  hidden:Hide()
-  self.hiddenButtons = hidden
-
   root:SetScript("OnUpdate", function()
     OctoPort.updateElapsed = (OctoPort.updateElapsed or 0) + arg1
-    if OctoPort.updateElapsed < 0.05 then return end
+    if OctoPort.updateElapsed < 0.10 then return end
     OctoPort.updateElapsed = 0
     OctoPort:UpdateLayer(false)
+    OctoPort:UpdateActionMirrors()
     OctoPort:UpdateTargetDisplay()
   end)
-end
-
-function OctoPort:CaptureAndPositionButtons()
-  if not self.root then return end
-
-  for key, definition in pairs(layerDefinitions) do
-    local layer = self.layers[key]
-    for slot = 1, 4 do
-      local button = _G[definition.framePrefix .. slot]
-      if button then
-        local actionSlot = nil
-        if key == "shift" then
-          actionSlot = 60 + slot
-        elseif key == "ctrl" then
-          actionSlot = 48 + slot
-        end
-        SetButtonPoint(button, layer, slot, actionSlot)
-        layer.buttons[slot] = button
-      end
-    end
-  end
-
-  -- Bonus action buttons replace the base layer for stances, stealth and forms.
-  self.bonusButtons = self.bonusButtons or {}
-  for slot = 1, 4 do
-    local button = _G["BonusActionButton" .. slot]
-    if button then
-      SetButtonPoint(button, self.layers.base, slot, nil)
-      self.bonusButtons[slot] = button
-    end
-  end
-
-  -- Slots 5-12 are not part of the controller face-button diamond. The D-pad
-  -- now owns targeting and is rendered separately on the left side.
-  local unusedPrefixes = {
-    "ActionButton",
-    "BonusActionButton",
-    "MultiBarBottomLeftButton",
-    "MultiBarBottomRightButton",
-  }
-  for _, prefix in pairs(unusedPrefixes) do
-    for slot = 5, 12 do
-      local button = _G[prefix .. slot]
-      if button then
-        SaveButtonState(button)
-        if prefix == "MultiBarBottomLeftButton" then
-          button.octoActionSlot = 60 + slot
-        elseif prefix == "MultiBarBottomRightButton" then
-          button.octoActionSlot = 48 + slot
-        end
-        button:SetParent(self.hiddenButtons)
-      end
-    end
-  end
-
-  self:UpdateBonusButtons(true)
-end
-
-function OctoPort:UpdateBonusButtons(force)
-  local bonusVisible = BonusActionBarFrame and BonusActionBarFrame:IsVisible()
-  if not force and self.lastBonusVisible == bonusVisible then return end
-  self.lastBonusVisible = bonusVisible
-
-  for slot = 1, 4 do
-    local normal = self.layers.base.buttons[slot]
-    local bonus = self.bonusButtons and self.bonusButtons[slot]
-    if normal then
-      normal:SetAlpha(bonusVisible and 0 or 1)
-      normal:EnableMouse(not bonusVisible)
-    end
-    if bonus then
-      bonus:SetAlpha(bonusVisible and 1 or 0)
-      bonus:EnableMouse(bonusVisible)
-      bonus:Show()
-    end
-  end
 end
 
 function OctoPort:GetActiveLayer()
@@ -330,33 +234,38 @@ function OctoPort:GetActiveLayer()
   return "base"
 end
 
-function OctoPort:InstallActionSlotHook()
-  if self.actionSlotHooked or not ActionButton_GetPagedID then return end
-  self.actionSlotHooked = true
-  self.originalActionButtonGetPagedID = ActionButton_GetPagedID
+function OctoPort:UpdateActionMirrors()
+  if not self.layers or not self.config or not self.config.enabled then return end
+  for layerName, layer in pairs(self.layers) do
+    for slot = 1, 4 do
+      local button = layer.buttons[slot]
+      local action = self:GetActionSlot(layerName, slot)
+      button.action = action
+      local texture = GetActionTexture(action)
+      if texture then
+        button.icon:SetTexture(texture)
+        button.icon:SetVertexColor(1, 1, 1)
+      else
+        button.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+        button.icon:SetVertexColor(0.35, 0.38, 0.42)
+      end
 
-  ActionButton_GetPagedID = function(button)
-    if button and button.octoActionSlot then
-      return button.octoActionSlot
+      local usable = IsUsableAction(action)
+      local inRange = IsActionInRange(action)
+      if (usable == nil or usable == 0) or inRange == 0 then
+        button.shade:SetVertexColor(0, 0, 0, 0.62)
+      else
+        button.shade:SetVertexColor(0, 0, 0, 0)
+      end
+
+      local count = GetActionCount(action) or 0
+      button.count:SetText(count > 1 and count or "")
     end
-    return OctoPort.originalActionButtonGetPagedID(button)
   end
-end
-
-function OctoPort:GetControllerActionButton(slot)
-  if not self.layers or slot < 1 or slot > 4 then return nil end
-  local layerName = self:GetActiveLayer()
-
-  if layerName == "base" and BonusActionBarFrame and BonusActionBarFrame:IsVisible() then
-    return self.bonusButtons and self.bonusButtons[slot]
-  end
-
-  local layer = self.layers[layerName]
-  return layer and layer.buttons[slot]
 end
 
 function OctoPort:PrepareAutomaticTarget()
-  if not self.config or not self.config.autoTarget then return end
+  if not self.config or not self.config.enabled or not self.config.autoTarget then return end
   if UnitExists("target") and not UnitIsDead("target") then return end
   TargetNearestEnemy()
 end
@@ -372,12 +281,11 @@ function OctoPort:HandleControllerAction(slot, keystate)
       self.contextConsumed[slot] = true
       return
     end
-
-    local button = self:GetControllerActionButton(slot)
-    if not button then return end
-    local action = ActionButton_GetPagedID(button)
+    local layerName = self:GetActiveLayer()
+    local action = self:GetActionSlot(layerName, slot)
+    local button = self.layers and self.layers[layerName] and self.layers[layerName].buttons[slot]
     self.controllerPressed[slot] = { button = button, action = action }
-    button:SetButtonState("PUSHED")
+    if button then button:SetBackdropColor(0.04, 0.28, 0.30, 0.98) end
     return
   end
 
@@ -388,18 +296,11 @@ function OctoPort:HandleControllerAction(slot, keystate)
 
   local pressed = self.controllerPressed[slot]
   self.controllerPressed[slot] = nil
-  if not pressed or not pressed.button or not pressed.action then return end
-
-  pressed.button:SetButtonState("NORMAL")
+  if not pressed or not pressed.action then return end
+  if pressed.button then pressed.button:SetBackdropColor(0.025, 0.04, 0.055, 0.94) end
   if not HasAction(pressed.action) then return end
   self:PrepareAutomaticTarget()
   UseAction(pressed.action, 0)
-
-  if IsCurrentAction(pressed.action) or IsAutoRepeatAction(pressed.action) then
-    pressed.button:SetChecked(1)
-  else
-    pressed.button:SetChecked(0)
-  end
 end
 
 function OctoPort:TargetChanged(direction)
@@ -411,7 +312,6 @@ end
 
 function OctoPort:UpdateTargetDisplay()
   if not self.targetNameText then return end
-
   if UnitExists("target") then
     local name = UnitName("target") or "CIL"
     self.targetNameText:SetText(string.upper(name))
@@ -425,14 +325,10 @@ function OctoPort:UpdateTargetDisplay()
     self.targetNameText:SetTextColor(0.65, 0.68, 0.72)
   end
 
-  if not self.targetPad then return end
   local activeDirection = nil
-  if self.targetFlashUntil and GetTime() < self.targetFlashUntil then
-    activeDirection = self.targetFlashDirection
-  end
-
+  if self.targetFlashUntil and GetTime() < self.targetFlashUntil then activeDirection = self.targetFlashDirection end
   for index = 1, table.getn(targetLayout) do
-    local node = self.targetPad[index]
+    local node = self.targetPad and self.targetPad[index]
     if node then
       if node.direction == activeDirection then
         node:SetBackdropBorderColor(0.24, 0.94, 0.88, 1)
@@ -445,8 +341,6 @@ end
 
 function OctoPort:UpdateLayer(force)
   if not self.root or not self.config or not self.config.enabled then return end
-  self:UpdateBonusButtons(false)
-
   local active = self:GetActiveLayer()
   if not force and self.lastLayer == active and self.lastEditMode == self.config.editMode then return end
   self.lastLayer = active
@@ -459,26 +353,16 @@ function OctoPort:UpdateLayer(force)
       layer:SetPoint("CENTER", self.root, "CENTER", 0, positions[key])
       layer:SetAlpha(key == active and 1 or 0.72)
       layer:Show()
-      for slot = 1, 4 do
-        if layer.buttons[slot] then layer.buttons[slot]:Show() end
-      end
     end
     self.root:SetHeight(340)
-    self.activeLayerText:SetText("EDITACE LISEK")
-    self.hintText:SetText("Pretahni schopnosti mysi  |  /octoport edit = hotovo")
+    self.activeLayerText:SetText("NAHLED TRI VRSTEV")
+    self.hintText:SetText("Schopnosti upravuj na puvodnich Blizzard listach")
   else
     for key, layer in pairs(self.layers) do
       layer:ClearAllPoints()
       layer:SetPoint("CENTER", self.root, "CENTER", 0, 0)
       layer:SetAlpha(1)
-      if key == active then
-        layer:Show()
-        for slot = 1, 4 do
-          if layer.buttons[slot] then layer.buttons[slot]:Show() end
-        end
-      else
-        layer:Hide()
-      end
+      if key == active then layer:Show() else layer:Hide() end
     end
     self.root:SetHeight(150)
     self.activeLayerText:SetText(layerDefinitions[active].title)
@@ -498,16 +382,11 @@ end
 
 function OctoPort:SetMoveMode(enabled)
   if not self.root then return end
-  local changed = self.lastMoveMode ~= (enabled and true or false)
-  self.lastMoveMode = enabled and true or false
   self.config.moveMode = enabled and true or false
   self.root:EnableMouse(self.config.moveMode)
   if self.config.moveMode then
     self.background:SetBackdropBorderColor(1.0, 0.65, 0.15, 1)
     self.activeLayerText:SetText("TAHNI MYSI")
-    if changed then
-      self:Print("HUD unlocked. Drag the panel with the left mouse button; /octoport move locks it.")
-    end
   else
     self.background:SetBackdropBorderColor(0.18, 0.75, 0.72, 0.75)
     self:UpdateLayer(true)
@@ -515,53 +394,27 @@ function OctoPort:SetMoveMode(enabled)
 end
 
 function OctoPort:RestoreDefaultButtons()
-  if not self.originalButtons then return end
-  for button, state in pairs(self.originalButtons) do
-    button:SetParent(state.parent)
-    button:ClearAllPoints()
-    if state.point then
-      button:SetPoint(state.point, state.relativeTo, state.relativePoint, state.x, state.y)
-    end
-    button:SetScale(state.scale or 1)
-    button:SetAlpha(state.alpha or 1)
-    button:EnableMouse(true)
-    if button.octoBadge then button.octoBadge:Hide() end
-    local hotkey = _G[button:GetName() .. "HotKey"]
-    if hotkey then
-      if state.hotkeyShown then hotkey:Show() else hotkey:Hide() end
-    end
-    if state.shown then button:Show() else button:Hide() end
-  end
+  -- Kept as a compatibility entry point for 0.4.x callers. Version 0.5.0 no
+  -- longer moves or modifies Blizzard buttons, so there is nothing to restore.
 end
 
 function OctoPort:SetUIEnabled(enabled)
+  if not self.root then return end
   if enabled then
-    self:CaptureAndPositionButtons()
     self.root:Show()
     self:ApplyLayout()
     self:UpdateLayer(true)
+    self:UpdateActionMirrors()
   else
-    self:RestoreDefaultButtons()
     self.root:Hide()
+    if self.radialFrame then self.radialFrame:Hide() end
+    if self.reticleFrame then self.reticleFrame:Hide() end
   end
 end
 
 function OctoPort:InitializeUI()
-  self:InstallActionSlotHook()
   self:CreateRoot()
   if self.CreateReticle then self:CreateReticle() end
   self:ApplyLayout()
   self:SetUIEnabled(self.config.enabled)
-
-  if UIParent_ManageFramePositions and not self.manageHooked then
-    self.manageHooked = true
-    self.originalManageFramePositions = UIParent_ManageFramePositions
-    UIParent_ManageFramePositions = function(a1, a2, a3)
-      OctoPort.originalManageFramePositions(a1, a2, a3)
-      if OctoPort.config and OctoPort.config.enabled then
-        OctoPort:CaptureAndPositionButtons()
-        OctoPort:UpdateLayer(true)
-      end
-    end
-  end
 end
