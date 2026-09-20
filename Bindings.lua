@@ -6,6 +6,10 @@
 -- when the controller is disabled and on PLAYER_LOGOUT.
 
 local bindingDefinitions = {
+  { id = "LSUP",   label = "L-Stick Up",    command = "OCTOPORT_MOVE_FORWARD",  defaultKey = "W", required = true, movement = "forward" },
+  { id = "LSDOWN", label = "L-Stick Down",  command = "OCTOPORT_MOVE_BACKWARD", defaultKey = "S", required = true, movement = "backward" },
+  { id = "LSLEFT", label = "L-Stick Left",  command = "OCTOPORT_MOVE_LEFT",     defaultKey = "A", required = true, movement = "left" },
+  { id = "LSRIGHT", label = "L-Stick Right", command = "OCTOPORT_MOVE_RIGHT",   defaultKey = "D", required = true, movement = "right" },
   { id = "A",      label = "A",           command = "OCTOPORT_ACTION_A",     defaultKey = "F9",    required = true },
   { id = "B",      label = "B",           command = "OCTOPORT_ACTION_B",     defaultKey = "F10",   required = true },
   { id = "X",      label = "X",           command = "OCTOPORT_ACTION_X",     defaultKey = "F11",   required = true },
@@ -97,6 +101,27 @@ function OctoPort:GetBindingDefinition(value)
   return FindDefinition(value)
 end
 
+function OctoPort:EnsureMovementDefaults()
+  if not self.config then return end
+  self.config.controllerKeys = self.config.controllerKeys or {}
+  if (tonumber(self.config.movementBindingVersion) or 0) >= 1 then return end
+
+  local assigned = {}
+  for id, key in pairs(self.config.controllerKeys) do
+    if key and key ~= "" then assigned[key] = id end
+  end
+
+  for index = 1, table.getn(bindingDefinitions) do
+    local definition = bindingDefinitions[index]
+    if definition.movement and not self.config.controllerKeys[definition.id] and not assigned[definition.defaultKey] then
+      self.config.controllerKeys[definition.id] = definition.defaultKey
+      assigned[definition.defaultKey] = definition.id
+    end
+  end
+
+  self.config.movementBindingVersion = 1
+end
+
 function OctoPort:GetControllerBindingKey(definition)
   if type(definition) ~= "table" then definition = FindDefinition(definition) end
   if not definition or not self.config then return nil end
@@ -120,7 +145,7 @@ function OctoPort:RefreshSetupState()
     end
   end
   self.config.setupComplete = complete
-  if complete then self.config.bindingVersion = 5 end
+  if complete then self.config.bindingVersion = 6 end
   if self.RefreshBindingMenu then self:RefreshBindingMenu() end
   return complete
 end
@@ -174,7 +199,8 @@ function OctoPort:ApplyRecommendedBindings()
     end
   end
 
-  self.config.bindingVersion = 5
+  self.config.movementBindingVersion = 1
+  self.config.bindingVersion = 6
   self:RefreshSetupState()
   if self.config.enabled then self:ActivateSessionBindings() end
   self:Print("Safe ROG Ally profile selected. It is session-only and does not overwrite saved WoW bindings.")
@@ -272,6 +298,37 @@ function OctoPort:SignalInput(id, state)
   self.lastControllerInputState = state or "press"
   self.lastControllerInputAt = GetTime()
   if self.UpdateInputDiagnostics then self:UpdateInputDiagnostics() end
+end
+
+function OctoPort_Move(direction, keystate)
+  if not OctoPort or not OctoPort.config or not OctoPort.config.enabled then return end
+
+  local ids = { forward = "LSUP", backward = "LSDOWN", left = "LSLEFT", right = "LSRIGHT" }
+  OctoPort:SignalInput(ids[direction], keystate)
+  if OctoPort.bindingCaptureActive then return end
+
+  local stopFunctions = {
+    forward = MoveForwardStop,
+    backward = MoveBackwardStop,
+    left = StrafeLeftStop,
+    right = StrafeRightStop,
+  }
+  if keystate ~= "down" then
+    if stopFunctions[direction] then stopFunctions[direction]() end
+    return
+  end
+
+  local menuDirection = { forward = "up", backward = "down", left = "left", right = "right" }
+  if OctoPort.HandleRadialDirection and OctoPort:HandleRadialDirection(menuDirection[direction]) then return end
+  if OctoPort.HandleConfigDirection and OctoPort:HandleConfigDirection(menuDirection[direction]) then return end
+
+  local startFunctions = {
+    forward = MoveForwardStart,
+    backward = MoveBackwardStart,
+    left = StrafeLeftStart,
+    right = StrafeRightStart,
+  }
+  if startFunctions[direction] then startFunctions[direction]() end
 end
 
 function OctoPort:GetRearActionLabel(button)

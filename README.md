@@ -1,8 +1,8 @@
 # WOW Controller
 
-Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. Version 0.5 is a safety rebuild: installation is inert, old persisted `OCTOPORT_*` bindings are repaired once, and controller bindings exist only for the current WoW session.
+Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. Version 0.6 restores ConsoleExperience-style left-stick movement without giving up the v0.5 safety model: installation is inert, old persisted `OCTOPORT_*` bindings are repaired once, and controller bindings exist only for the current WoW session.
 
-OctoWoW's 1.12 client has no native XInput support. Armoury Crate SE must convert the physical controller to keyboard/mouse signals. The left stick therefore stays native `W/A/S/D` and the right stick stays a mouse; the addon maps only controller actions such as ABXY, D-pad, Menu, View and rear paddles.
+OctoWoW's 1.12 client has no native XInput support. Armoury Crate SE or Steam Input must convert the physical controller to keyboard/mouse signals. The addon captures the four left-stick signals and routes them to WoW's native movement functions; the right stick remains a mouse. This is the same device-side principle used by ConsoleExperienceClassic, while WOW Controller keeps every binding temporary and reversible.
 
 ## Safety model
 
@@ -29,7 +29,7 @@ The repository name must remain `Wow_Controller`: OctoLauncher clones it directl
 
 ## First controller setup
 
-The wizard captures A, B, X, Y, all four D-pad directions and Menu. View, LB, LT, rear M1 and rear M2 are optional steps. Enter, Escape, arrow keys, F-keys, ordinary keys and mouse buttons are supported. The left stick is not rebound by the addon: map it to `W/A/S/D` in Armoury Crate. The right stick remains a mouse and has its own live movement test in Diagnostics.
+The wizard first captures all four left-stick directions, then A, B, X, Y, all four D-pad directions and Menu. View, LB, LT, rear M1 and rear M2 are optional steps. Enter, Escape, arrow keys, F-keys, ordinary keys and mouse buttons are supported. Map the left stick to `W/A/S/D` in Armoury Crate or capture any four alternative keys in the wizard. The right stick remains a mouse and has its own live movement test in Diagnostics.
 
 If the wizard does not advance when you press a control, that button is not sending a keyboard/mouse signal to WoW. Assign any unused key to it in the game's Armoury Crate Desktop Mode profile, return to WoW and press it again. For mouse-button capture, point the cursor at the capture window. Auto mode can select Gamepad Mode, which the old 1.12 client cannot consume as XInput.
 
@@ -39,7 +39,7 @@ Recommended device-side controls that do not need the wizard:
 
 | ROG Ally control | Armoury Crate output | Purpose |
 |---|---|---|
-| Left stick | W / A / S / D | Movement |
+| Left stick | W / A / S / D | Captured by WOW Controller; native movement and menu navigation |
 | Right stick | Mouse | Camera, cursor and radial direction |
 | RB | Left mouse button | UI click |
 | RT | Right mouse button | Camera and world interaction |
@@ -64,7 +64,8 @@ Inside the menu, D-pad left/right changes tabs, up/down moves focus, A activates
 ## Default behavior
 
 - D-pad Up/Down cycles friendly targets; Left/Right cycles enemy targets.
-- Left stick drives native `W/A/S/D` movement through the Armoury Crate Desktop Mode profile; the addon never takes ownership of movement keys.
+- Left stick drives WoW's native forward/backward/strafe functions. Its four emitted keys are active only during the controller session and are restored exactly when the addon is disabled or the player logs out.
+- When Controller settings or the radial wheel is open, the left stick changes to directional menu navigation and does not move the character.
 - The center reticle is cyan without a target, red for enemies and green for friendly targets; it also shows target health.
 - A confirms visible dialogs or uses face action 1. B closes/cancels or uses face action 2. X/Y use face actions 3/4.
 - LB and LT select the second and third four-action layers. They can be native Shift/Ctrl or ordinary mapped keys.

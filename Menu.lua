@@ -353,7 +353,7 @@ local function BuildSetupPanel(panel)
   title:SetTextColor(0.24, 0.84, 0.81)
 
   local body = MakeLabel(panel, "GameFontHighlightSmall",
-    "BEZPECNY REZIM: instalace nic nemeni sama. Klavesy ovladace se pouziji jen po zapnuti a jen pro aktualni relaci; pri vypnuti nebo odhlaseni se puvodni vazby vrati. V Armoury Crate nastav CONTROL MODE = DESKTOP, levou packu na W/A/S/D a pravou na mys.", 470)
+    "BEZPECNY REZIM: klavesy ovladace se pouziji jen po zapnuti a jen pro aktualni relaci; pri vypnuti nebo odhlaseni se puvodni vazby vrati. Leva packa se zachyti jako ctyri smery a ve hre spousti nativni pohyb WoW. Prava packa zustava mysi.", 470)
   body:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -16)
   body:SetJustifyH("LEFT")
   body:SetJustifyV("TOP")
@@ -389,7 +389,7 @@ local function BuildSetupPanel(panel)
   enable:SetPoint("TOPLEFT", preset, "BOTTOMLEFT", 0, -12)
 
   local note = MakeLabel(panel, "GameFontDisableSmall",
-    "Addon uz nepresouva Blizzard action buttony, neprepisuje globalni FrameXML funkce a pri beznem hrani nikdy nevola SaveBindings. M1/M2 prirad v Armoury Crate vlastnim klavesam.", 470)
+    "V Armoury Crate nastav CONTROL MODE = DESKTOP a levou packu na W/A/S/D, nebo jeji ctyri smery zachyt v pruvodci. Addon pri beznem hrani nikdy nevola SaveBindings. M1/M2 prirad vlastnim klavesam.", 470)
   note:SetPoint("TOPLEFT", enable, "BOTTOMLEFT", 0, -18)
   note:SetJustifyH("LEFT")
 
@@ -439,7 +439,7 @@ local function BuildControlsPanel(panel)
   end))
   wizard:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 0)
 
-  local help = MakeLabel(panel, "GameFontDisableSmall", "D-pad: vlevo/vpravo meni zalozku, nahoru/dolu vybira. A potvrdi, B zavre.", 300)
+  local help = MakeLabel(panel, "GameFontDisableSmall", "Leva packa i D-pad ovladaji menu. A potvrdi, B zavre.", 300)
   help:SetPoint("LEFT", wizard, "RIGHT", 12, 0)
 end
 

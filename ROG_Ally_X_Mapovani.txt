@@ -1,4 +1,4 @@
-WOW CONTROLLER 0.5.0 - ROG ALLY X / ARMOURY CRATE SE
+WOW CONTROLLER 0.6.0 - ROG ALLY X / ARMOURY CRATE SE
 ================================================
 
 RYCHLY START
@@ -10,15 +10,16 @@ RYCHLY START
 5. View, LB, LT, M1 a M2 jsou volitelne; lze je v pruvodci preskocit.
 6. Zvol ZAPNOUT BEZPECNE a v DIAGNOSTICE over tlacitka i pravou packu.
 
-Klient WoW 1.12 neumi XInput, proto Gamepad Mode nefunguje. Leva packa zustava
-primo W/A/S/D a prava packa mysi. Addon zachyti skutecnou klavesu nebo klik,
+Klient WoW 1.12 neumi XInput, proto Gamepad Mode nefunguje. Leva packa vysila
+W/A/S/D a addon je po dobu aktivni relace prevadi na nativni pohyb WoW; prava
+packa zustava mysi. Addon zachyti skutecnou klavesu nebo klik,
 ktery Armoury Crate posila. Pokud se pruvodce po stisku neposune, dane tlacitko
 neposila do WoW zadny klavesnicovy/mysi signal. V hernim Desktop Mode profilu mu
 prirad libovolnou nepouzitou klavesu a zkus stisk znovu.
 
 DOPORUCENE MAPOVANI MIMO PRUVODCE
 ---------------------------------
-Leva packa        W / A / S / D       Pohyb
+Leva packa        W / A / S / D       Pohyb + navigace v menu/radialu
 Prava packa       Mouse                Kurzor / kamera / radialni vyber
 RB                Levy klik            Vyber v UI
 RT                Pravy klik           Kamera / interakce
@@ -39,8 +40,9 @@ LB/LT             Shift/Ctrl
 View              F7
 M1/M2             F6/F5
 
-Pouzij tlacitko ROG ALLY PROFIL nebo prikaz /octoport preset. Profil se aktivuje
-jen pro aktualni relaci a pri vypnuti nebo odhlaseni vrati puvodni bindy.
+Pouzij tlacitko ROG ALLY PROFIL nebo prikaz /octoport preset. Profil vcetne
+ctyr smeru leve packy se aktivuje jen pro aktualni relaci a pri vypnuti nebo
+odhlaseni vrati puvodni bindy.
 
 OVLADANI VE HRE
 ---------------
@@ -54,7 +56,7 @@ OVLADANI VE HRE
 V Controller menu meni D-pad vlevo/vpravo zalozku, nahoru/dolu vyber, A potvrdi
 a B zavre. Ve hre D-pad nahoru/dolu prepina pratele a vlevo/vpravo nepritele.
 Podrzenim Menu se otevre radialni kolo; smer vyber pravou packou nebo D-padem.
-Leva packa ovlada pohyb pres nativni W/A/S/D. Zamerovac uprostred je cerveny pro nepritele, zeleny
+Leva packa ovlada pohyb; v Controller menu a radialu slouzi jako smerova navigace. Zamerovac uprostred je cerveny pro nepritele, zeleny
 pro pratele a ukazuje zdravi cile. Akce M1/M2 zmenis v zalozce HRANI.
 
 BEZPECNOST HESLA
