@@ -1,6 +1,6 @@
 # WOW Controller
 
-Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. Version 0.7.0 adds an always-available minimap test button, raw keyboard/mouse input testing, collision detection and complete ROG Ally control coverage while preserving protected-Lua-free movement and session-only bindings.
+Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. Version 0.7.1 adds immediate fallbacks for incomplete Armoury Crate profiles while preserving protected-Lua-free movement and session-only bindings.
 
 OctoWoW's 1.12 client has no native XInput support. Armoury Crate SE or Steam Input must convert the physical controller to keyboard/mouse signals. The addon binds the four left-stick signals directly to Blizzard's native movement commands; it never calls the protected movement functions from Lua. The right stick remains a mouse. This is the same device-side principle used by ConsoleExperienceClassic, while WOW Controller keeps every binding temporary and reversible.
 
@@ -31,7 +31,9 @@ The repository name must remain `Wow_Controller`: OctoLauncher clones it directl
 
 The wizard first captures all four left-stick directions, then A, B, X, Y, all four D-pad directions and Menu. LB, LT, RB, RT, L3, R3, View, rear M1 and rear M2 are optional steps. Enter, Escape, arrow keys, F-keys, ordinary keys and mouse buttons are supported. Map the left stick to `W/A/S/D` in Armoury Crate or capture any four alternative keys in the wizard. The D-pad must emit four different signals. If the same key is received for two controls, the wizard stops and shows the collision instead of silently replacing movement with targeting.
 
-The minimap **WC** button remains visible even while the controller session is off. Left-click opens **RAW TEST**, which displays exactly what WoW receives before the addon binds anything. Move the left stick first: it must report `W`, `S`, `A`, `D`. If it reports arrow keys, the Armoury Crate profile—not Lua—is routing the stick to the D-pad targeting signals. Right-stick movement is reported as `MOUSE MOVE`.
+The minimap **WC** button remains visible even while the controller session is off. Left-click opens **RAW TEST**, which displays exactly what WoW receives before the addon binds anything, including `ESCAPE`. Move the left stick first: it should report `W`, `S`, `A`, `D`. If it reports arrow keys, the Armoury Crate profile—not Lua—is routing the stick to the D-pad targeting signals. Right-stick movement is reported as `MOUSE MOVE`.
+
+If at least one physical button reaches the raw test, press it and choose **POSLEDNI VSTUP = MENU**. WOW Controller enables a menu-only session and binds only that one key; movement and face-button bindings remain untouched. If the stick emits arrow keys, **CHUZE ZE SIPEK** in Setup provides an immediate emergency profile: arrows drive native movement, `Escape` opens settings, and conflicting D-pad targeting is disabled. The physical D-pad will also move in this temporary mode because the client receives identical signals.
 
 If the wizard does not advance when you press a control, that button is not sending a keyboard/mouse signal to WoW. Assign any unused key to it in the game's Armoury Crate Desktop Mode profile, return to WoW and press it again. For mouse-button capture, point the cursor at the capture window. Auto mode can select Gamepad Mode, which the old 1.12 client cannot consume as XInput.
 
@@ -84,6 +86,7 @@ Inside the menu, D-pad left/right changes tabs, up/down moves focus, A activates
 - `/wc`, `/octoport` or `/op` — open Controller settings.
 - `/octoport setup` — start the binding wizard.
 - `/octoport test` — open raw keyboard/mouse input testing.
+- `/octoport arrows` — enable emergency arrow-key movement and disable conflicting D-pad targeting.
 - `/octoport preset` — select the session-only ROG Ally F-key profile.
 - `/octoport diagnostics` — open live input testing.
 - `/octoport restore` — remove saved `OCTOPORT_*` bindings, restore captured actions and turn the addon off.

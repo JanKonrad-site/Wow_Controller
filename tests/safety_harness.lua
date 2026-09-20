@@ -103,6 +103,35 @@ assert(OctoPort.config.lastBindingCollision and OctoPort.config.lastBindingColli
 OctoPort:ApplyRecommendedBindings()
 assert(OctoPort.config.lastBindingCollision == nil, "preset did not clear old collision warning")
 
+-- A working raw key can enable a menu-only session without activating the
+-- rest of an incomplete controller profile.
+bindings.F4 = "TOGGLECHARACTER0"
+OctoPort.config.enabled = false
+assert(OctoPort:SetQuickMenuKey("F4"), "quick menu key was rejected")
+assert(OctoPort.config.menuOnlyMode == true, "quick menu did not use menu-only safety mode")
+assert(bindings.F4 == "OCTOPORT_OPENCONFIG", "quick menu binding was not activated")
+assert(bindings.F9 == "OPENCHAT", "menu-only mode activated unrelated face buttons")
+assert(bindings.W == "OPENCHAT", "menu-only mode activated movement")
+OctoPort:DeactivateSessionBindings()
+assert(bindings.F4 == "TOGGLECHARACTER0", "quick menu key was not restored")
+
+-- Emergency mode makes an arrow-emitting stick usable immediately. The
+-- overlapping D-pad targeting actions are intentionally left unbound.
+bindings.UP = "PREVIOUSACTIONPAGE"
+bindings.ESCAPE = "TOGGLEGAMEMENU"
+OctoPort.config.enabled = false
+OctoPort:ApplyArrowMovementFallback()
+assert(bindings.UP == "MOVEFORWARD", "arrow fallback did not bind forward movement")
+assert(bindings.DOWN == "MOVEBACKWARD", "arrow fallback did not bind backward movement")
+assert(bindings.LEFT == "STRAFELEFT" and bindings.RIGHT == "STRAFERIGHT", "arrow fallback did not bind strafing")
+assert(bindings.ESCAPE == "OCTOPORT_OPENCONFIG", "arrow fallback did not provide a menu key")
+assert(OctoPort.config.controllerKeys.DUP == nil and OctoPort.config.controllerKeys.DDOWN == nil, "arrow fallback left conflicting D-pad targets")
+assert(OctoPort.config.setupComplete == true, "arrow fallback was marked incomplete")
+OctoPort:DeactivateSessionBindings()
+assert(bindings.UP == "PREVIOUSACTIONPAGE", "arrow fallback did not restore original arrow binding")
+assert(bindings.ESCAPE == "TOGGLEGAMEMENU", "arrow fallback did not restore Escape")
+assert(saveCount == 0, "fallback modes persisted bindings")
+
 -- Migration is intentionally the sole persistent write. It repairs commands
 -- saved by versions 0.1-0.4 and then leaves the addon disabled.
 bindings.W = "OCTOPORT_MOVE_FORWARD"

@@ -227,6 +227,11 @@ function OctoPort:StartSingleBinding(definition)
 end
 
 function OctoPort:StopBindingCapture(completed)
+  if completed then
+    self.config.arrowMovementFallback = false
+    self.config.menuOnlyMode = false
+    if self.config.enabled and self.ActivateSessionBindings then self:ActivateSessionBindings() end
+  end
   self.bindingCaptureActive = false
   self.captureDefinition = nil
   self.captureIndex = nil
@@ -314,6 +319,10 @@ function OctoPort:RefreshBindingMenu()
       local previous = self:GetBindingDefinition(collision.previous)
       local current = self:GetBindingDefinition(collision.current)
       self.setupStatus:SetText("|cffff6655KOLIZE " .. collision.key .. ": " .. (previous and previous.label or collision.previous) .. " / " .. (current and current.label or collision.current) .. "|r")
+    elseif self.config.arrowMovementFallback then
+      self.setupStatus:SetText("|cffffb83dNOUZOVY POHYB: SIPKY, D-PAD TARGETING VYPNUT|r")
+    elseif self.config.menuOnlyMode then
+      self.setupStatus:SetText("|cffffb83dAKTIVNI JE JEN TLACITKO PRO MENU|r")
     else
       self.setupStatus:SetText(complete and "|cff4df273OVLADAC JE PRIPRAVEN|r" or "|cffff6655DOKONCI PRUVODCE VSTUPU|r")
     end
@@ -338,6 +347,7 @@ function OctoPort:RecordRawInput(raw)
   if not self.rawTestFrame or not self.rawTestFrame:IsVisible() then return end
   local key = ComposeKey(raw)
   if not key or key == "UNKNOWN" then return end
+  self.lastRawInputKey = key
 
   local matches = RawInputMatch(key)
   local labels = "NEPRIRAZENO"
@@ -390,7 +400,7 @@ function OctoPort:CreateRawInputTest()
   title:SetTextColor(0.24, 0.84, 0.81)
 
   local body = MakeLabel(frame, "GameFontHighlightSmall",
-    "Postupne pohni levou packou a stiskni ABXY, D-pad, Menu, View, LB/LT, RB/RT, L3/R3 a M1/M2. Test ukazuje presny keyboard/mouse signal jeste pred zapnutim addonu.", 520)
+    "Postupne pohni levou packou a stiskni ABXY, D-pad, Menu, View, LB/LT, RB/RT, L3/R3 a M1/M2. Escape se take zobrazi. Kdyz se nic nezmeni, tlacitko posila jen XInput a musi se premapovat v Armoury Crate.", 520)
   body:SetPoint("TOP", title, "BOTTOM", 0, -16)
   body:SetJustifyH("LEFT")
 
@@ -409,11 +419,22 @@ function OctoPort:CreateRawInputTest()
   history:SetPoint("TOPLEFT", historyTitle, "BOTTOMLEFT", 0, -8)
   history:SetJustifyH("LEFT")
 
+  local useForMenu = MakeButton(frame, "POSLEDNI VSTUP = MENU", 190, function()
+    if not OctoPort.lastRawInputKey then
+      OctoPort.rawTestFrame.warning:SetText("Nejprve stiskni jedno funkcni fyzicke tlacitko.")
+      return
+    end
+    if OctoPort:SetQuickMenuKey(OctoPort.lastRawInputKey) then
+      OctoPort.rawTestFrame:Hide()
+    end
+  end)
+  useForMenu:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 92, 28)
+
   local close = MakeButton(frame, "ZAVRIT TEST", 150, function() OctoPort.rawTestFrame:Hide() end)
-  close:SetPoint("BOTTOM", frame, "BOTTOM", 0, 28)
+  close:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -92, 28)
 
   frame:SetScript("OnKeyDown", function()
-    if arg1 == "ESCAPE" then this:Hide() else OctoPort:RecordRawInput(arg1) end
+    OctoPort:RecordRawInput(arg1)
   end)
   frame:SetScript("OnMouseDown", function() OctoPort:RecordRawInput(arg1) end)
   frame:SetScript("OnUpdate", function()
@@ -433,6 +454,7 @@ function OctoPort:CreateRawInputTest()
   frame.last = last
   frame.warning = warning
   frame.history = history
+  frame.menuButton = useForMenu
   self.rawTestFrame = frame
 end
 
@@ -440,6 +462,7 @@ function OctoPort:StartRawInputTest()
   self:CreateRawInputTest()
   if self.configFrame then self.configFrame:Hide() end
   self.rawInputHistory = {}
+  self.lastRawInputKey = nil
   self.rawTestFrame.history:SetText("")
   self.rawTestFrame.last:SetText("RAW: cekam na vstup")
   self.rawTestFrame.warning:SetText("Leva packa musi ukazat W/S/A/D. D-pad musi ukazat sipky nebo ctyri jine samostatne klavesy.")
@@ -561,8 +584,14 @@ local function BuildSetupPanel(panel)
   end))
   enable:SetPoint("TOPLEFT", preset, "BOTTOMLEFT", 0, -12)
 
+  local arrowFallback = AddFocusable(panel, MakeButton(panel, "CHUZE ZE SIPEK", 160, function()
+    OctoPort:ApplyArrowMovementFallback()
+    OctoPort:RefreshBindingMenu()
+  end))
+  arrowFallback:SetPoint("LEFT", enable, "RIGHT", 10, 0)
+
   local note = MakeLabel(panel, "GameFontDisableSmall",
-    "V Armoury Crate nastav CONTROL MODE = DESKTOP. Leva packa musi vysilat W/A/S/D a D-pad ctyri odlisne klavesy. M1/M2 nastav jako samostatna tlacitka. Systemova tlacitka Command Center a Armoury Crate addon zachytit nemuze.", 470)
+    "V Armoury Crate nastav CONTROL MODE = DESKTOP. Idealne leva packa W/A/S/D a D-pad ctyri odlisne klavesy. Pokud packa zatim vysila sipky, CHUZE ZE SIPEK ji zprovozni za cenu vypnuteho D-pad targetingu. M1/M2 musi byt samostatna tlacitka.", 470)
   note:SetPoint("TOPLEFT", enable, "BOTTOMLEFT", 0, -18)
   note:SetJustifyH("LEFT")
 

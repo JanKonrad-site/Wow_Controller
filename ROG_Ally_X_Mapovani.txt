@@ -1,4 +1,4 @@
-WOW CONTROLLER 0.7.0 - ROG ALLY X / ARMOURY CRATE SE
+WOW CONTROLLER 0.7.1 - ROG ALLY X / ARMOURY CRATE SE
 ================================================
 
 RYCHLY START
@@ -11,6 +11,16 @@ RYCHLY START
 6. Pravym klikem na WC otevri nastaveni a zvol profil nebo pruvodce.
 7. RB, RT, L3, R3, View, LB, LT, M1 a M2 jsou volitelne kroky.
 8. Zvol ZAPNOUT BEZPECNE a v DIAGNOSTICE over vsechny vstupy.
+
+KDYZ PROFIL JESTE NENI OPRAVENY
+-------------------------------
+- RAW TEST uz Escape nezavira, ale ukaze jej jako vstup.
+- Stiskni libovolne tlacitko, ktere test vidi, a klikni POSLEDNI VSTUP = MENU.
+  Aktivuje se pouze tato jedna docasna vazba pro otevreni nastaveni.
+- Jestli leva packa ukazuje sipky, v Setupu klikni CHUZE ZE SIPEK. Sipky se
+  pouziji pro nativni pohyb, Escape pro menu a D-pad targeting se vypne.
+- V nouzovem rezimu bude postavu pohybovat take fyzicky D-pad, protoze vysila
+  naprosto stejne signaly jako packa.
 
 Klient WoW 1.12 neumi XInput, proto Gamepad Mode nefunguje. Leva packa vysila
 W/A/S/D a addon je po dobu aktivni relace navaze primo na nativni pohybove
@@ -59,6 +69,7 @@ OVLADANI VE HRE
 /octoport setup             Pruvodce mapovanim
 /octoport diagnostics       Zivy test vstupu
 /octoport test              Raw test skutecnych signalu
+/octoport arrows            Nouzova chuze, kdyz packa vysila sipky
 /octoport preset            Bezpecny session-only profil
 /octoport restore           Nouzove vycistit bindy a addon vypnout
 /octoport wheel             Editor radialniho kola
