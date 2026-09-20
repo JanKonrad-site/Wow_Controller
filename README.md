@@ -1,6 +1,6 @@
 # WOW Controller
 
-Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. Version 0.7.1 adds immediate fallbacks for incomplete Armoury Crate profiles while preserving protected-Lua-free movement and session-only bindings.
+Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. Version 0.7.2 adds a visible walk/target switch for profiles where the stick and D-pad emit the same arrows, plus an optional native ABXY 1-4 profile.
 
 OctoWoW's 1.12 client has no native XInput support. Armoury Crate SE or Steam Input must convert the physical controller to keyboard/mouse signals. The addon binds the four left-stick signals directly to Blizzard's native movement commands; it never calls the protected movement functions from Lua. The right stick remains a mouse. This is the same device-side principle used by ConsoleExperienceClassic, while WOW Controller keeps every binding temporary and reversible.
 
@@ -33,11 +33,11 @@ The wizard first captures all four left-stick directions, then A, B, X, Y, all f
 
 The minimap **WC** button remains visible even while the controller session is off. Left-click opens **RAW TEST**, which displays exactly what WoW receives before the addon binds anything, including `ESCAPE`. Move the left stick first: it should report `W`, `S`, `A`, `D`. If it reports arrow keys, the Armoury Crate profile—not Lua—is routing the stick to the D-pad targeting signals. Right-stick movement is reported as `MOUSE MOVE`.
 
-If at least one physical button reaches the raw test, press it and choose **POSLEDNI VSTUP = MENU**. WOW Controller enables a menu-only session and binds only that one key; movement and face-button bindings remain untouched. If the stick emits arrow keys, **CHUZE ZE SIPEK** in Setup provides an immediate emergency profile: arrows drive native movement, `Escape` opens settings, and conflicting D-pad targeting is disabled. The physical D-pad will also move in this temporary mode because the client receives identical signals.
+If at least one physical button reaches the raw test, press it and choose **VSTUP = MENU**. WOW Controller enables a menu-only session and binds only that one key; movement and face-button bindings remain untouched. If the stick emits arrow keys, **CHUZE ZE SIPEK** activates a second minimap button. **CHOD** binds the shared arrows to native movement; **CIL** binds Up/Down to friendly targeting and Left/Right to enemy targeting. Because WoW receives identical signals, the physical stick and D-pad both follow the selected mode. Press another working raw button and choose **VSTUP = CHOD/CIL** to use it as the toggle.
 
 If the wizard does not advance when you press a control, that button is not sending a keyboard/mouse signal to WoW. Assign any unused key to it in the game's Armoury Crate Desktop Mode profile, return to WoW and press it again. For mouse-button capture, point the cursor at the capture window. Auto mode can select Gamepad Mode, which the old 1.12 client cannot consume as XInput.
 
-For M1/M2, clear **Set as Secondary Function** in Armoury Crate before assigning an unused keyboard key to each paddle. The physical Command Center and Armoury Crate buttons are system-reserved and cannot be remapped; use View for WOW Controller settings instead.
+For M1/M2, clear **Set as Secondary Function** in Armoury Crate before assigning an unused keyboard key to each paddle. Confirm those keys in RAW TEST before binding them—the addon cannot detect a paddle that emits no keyboard or mouse event. The physical Command Center and Armoury Crate buttons are system-reserved and cannot be remapped; use View for WOW Controller settings instead.
 
 Recommended device-side controls that do not need the wizard:
 
@@ -54,6 +54,8 @@ Recommended device-side controls that do not need the wizard:
 | M1 | Any unused key | Configurable; default settings |
 | M2 | Any unused key | Configurable; default interact |
 
+The **ABXY = 1 2 3 4** Setup button uses Blizzard's native action commands: A activates action slot 1, B slot 2, X slot 3 and Y slot 4. Armoury Crate must first be configured to emit the keyboard keys `1`, `2`, `3`, `4` from those physical buttons. Like every WOW Controller profile, this mapping exists only for the active session and the previous 1-4 bindings are restored on disable/logout.
+
 The ABXY F9-F12, D-pad arrows, Menu F8, View F7 and rear F6/F5 profile is available through **ROG ALLY PROFIL** or `/octoport preset`. These bindings are temporary even when the profile is selected.
 
 ## Controller menu
@@ -69,7 +71,7 @@ Inside the menu, D-pad left/right changes tabs, up/down moves focus, A activates
 
 ## Default behavior
 
-- D-pad Up/Down cycles friendly targets; Left/Right cycles enemy targets.
+- D-pad Up/Down cycles friendly targets; Left/Right cycles enemy targets. When the stick and D-pad share arrow signals, select **CIL** at the minimap first; select **CHOD** to return those arrows to movement.
 - Left stick drives Blizzard's native forward/backward/strafe binding commands. Its four emitted keys are active only during the controller session and are restored exactly when the addon is disabled or the player logs out.
 - D-pad controls Controller settings and cardinal radial selection; movement keys remain owned by Blizzard UI to avoid protected-action blocking.
 - The center reticle is cyan without a target, red for enemies and green for friendly targets; it also shows target health.
@@ -86,7 +88,8 @@ Inside the menu, D-pad left/right changes tabs, up/down moves focus, A activates
 - `/wc`, `/octoport` or `/op` — open Controller settings.
 - `/octoport setup` — start the binding wizard.
 - `/octoport test` — open raw keyboard/mouse input testing.
-- `/octoport arrows` — enable emergency arrow-key movement and disable conflicting D-pad targeting.
+- `/octoport arrows` — enable shared-arrow movement plus the minimap **CHOD/CIL** switch.
+- `/octoport mode` — toggle shared arrows between movement and targeting.
 - `/octoport preset` — select the session-only ROG Ally F-key profile.
 - `/octoport diagnostics` — open live input testing.
 - `/octoport restore` — remove saved `OCTOPORT_*` bindings, restore captured actions and turn the addon off.

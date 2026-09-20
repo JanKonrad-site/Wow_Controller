@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.2
+
+- Replaced the one-way arrow emergency profile with a reversible **CHOD/CIL** mode for hardware profiles where the left stick and D-pad emit identical arrow keys.
+- Added a persistent minimap mode button: CHOD binds arrows to native movement; CIL binds Up/Down to friendly targeting and Left/Right to enemy targeting.
+- Added **VSTUP = CHOD/CIL** to RAW TEST so any working non-arrow button can toggle the mode without opening settings or typing a slash command.
+- Added **ABXY = 1 2 3 4**, using Blizzard's native `ACTIONBUTTON1`-`ACTIONBUTTON4` commands with exact session restoration.
+- Expanded automated safety and UI tests for mode switching, raw-button assignment, native ABXY actions and restoration.
+
 ## 0.7.1
 
 - Fixed raw testing so `Escape` is displayed instead of closing the test, allowing the default Desktop Mode B/Menu signal to be diagnosed.

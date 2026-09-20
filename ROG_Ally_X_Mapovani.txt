@@ -1,4 +1,4 @@
-WOW CONTROLLER 0.7.1 - ROG ALLY X / ARMOURY CRATE SE
+WOW CONTROLLER 0.7.2 - ROG ALLY X / ARMOURY CRATE SE
 ================================================
 
 RYCHLY START
@@ -15,12 +15,15 @@ RYCHLY START
 KDYZ PROFIL JESTE NENI OPRAVENY
 -------------------------------
 - RAW TEST uz Escape nezavira, ale ukaze jej jako vstup.
-- Stiskni libovolne tlacitko, ktere test vidi, a klikni POSLEDNI VSTUP = MENU.
+- Stiskni libovolne tlacitko, ktere test vidi, a klikni VSTUP = MENU.
   Aktivuje se pouze tato jedna docasna vazba pro otevreni nastaveni.
 - Jestli leva packa ukazuje sipky, v Setupu klikni CHUZE ZE SIPEK. Sipky se
-  pouziji pro nativni pohyb, Escape pro menu a D-pad targeting se vypne.
-- V nouzovem rezimu bude postavu pohybovat take fyzicky D-pad, protoze vysila
-  naprosto stejne signaly jako packa.
+  pouziji pro nativni pohyb, Escape pro menu a u minimapy se objevi CHOD/CIL.
+- CHOD pouziva sipky pro pohyb. CIL pouziva nahoru/dolu pro pratele a
+  vlevo/vpravo pro nepritele. Protoze packa i D-pad vysilaji stejne signaly,
+  oba fyzicke ovladace vzdy delaji akci z prave zvoleneho rezimu.
+- V RAW TESTU lze funkcni tlacitko priradit pres VSTUP = CHOD/CIL, aby se
+  rezim dal prepinat bez mysi a bez otevirani nastaveni.
 
 Klient WoW 1.12 neumi XInput, proto Gamepad Mode nefunguje. Leva packa vysila
 W/A/S/D a addon je po dobu aktivni relace navaze primo na nativni pohybove
@@ -42,6 +45,10 @@ Menu              F8                   Radialni kolo / herni menu
 View              Libovolna klavesa    Nastaveni WOW Controller
 M1                Libovolna klavesa    Nastavitelna akce (vychozi nastaveni)
 M2                Libovolna klavesa    Nastavitelna akce (vychozi interakce)
+
+Volba ABXY = 1 2 3 4 v Setupu nastavi A/B/X/Y na nativni Blizzard akce 1-4.
+Nejprve ale v Armoury Crate nastav fyzicka tlacitka tak, aby opravdu vysilala
+klavesy 1/2/3/4. Predchozi herni bindy se po vypnuti nebo odhlaseni vrati.
 
 U M1/M2 vypni v Armoury Crate volbu Set as Secondary Function. Tlacitka Command
 Center a Armoury Crate jsou systemova a nelze je premapovat ani zachytit addonem.
@@ -70,6 +77,7 @@ OVLADANI VE HRE
 /octoport diagnostics       Zivy test vstupu
 /octoport test              Raw test skutecnych signalu
 /octoport arrows            Nouzova chuze, kdyz packa vysila sipky
+/octoport mode              Prepnout sdilene sipky mezi CHOD a CIL
 /octoport preset            Bezpecny session-only profil
 /octoport restore           Nouzove vycistit bindy a addon vypnout
 /octoport wheel             Editor radialniho kola

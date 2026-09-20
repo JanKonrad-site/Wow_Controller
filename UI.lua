@@ -410,6 +410,26 @@ function OctoPort:SetUIEnabled(enabled)
     if self.radialFrame then self.radialFrame:Hide() end
     if self.reticleFrame then self.reticleFrame:Hide() end
   end
+  if self.UpdateArrowModeButton then self:UpdateArrowModeButton() end
+end
+
+function OctoPort:UpdateArrowModeButton()
+  if not self.arrowModeButton then return end
+  if not self.config or not self.config.enabled or not self.config.arrowMovementFallback then
+    self.arrowModeButton:Hide()
+    return
+  end
+
+  self.arrowModeButton:Show()
+  if self.config.arrowInputMode == "target" then
+    self.arrowModeButton.label:SetText("CIL")
+    self.arrowModeButton.label:SetTextColor(1.00, 0.35, 0.25)
+    self.arrowModeButton:SetBackdropBorderColor(1.00, 0.35, 0.25, 1)
+  else
+    self.arrowModeButton.label:SetText("CHOD")
+    self.arrowModeButton.label:SetTextColor(0.30, 0.95, 0.45)
+    self.arrowModeButton:SetBackdropBorderColor(0.30, 0.95, 0.45, 1)
+  end
 end
 
 function OctoPort:CreateMinimapButton()
@@ -457,6 +477,39 @@ function OctoPort:CreateMinimapButton()
   end)
 
   self.minimapButton = button
+
+  local mode = CreateFrame("Button", "OctoPortArrowModeButton", anchor)
+  mode:SetWidth(42)
+  mode:SetHeight(28)
+  mode:SetPoint("TOPLEFT", button, "BOTTOMLEFT", -5, -2)
+  mode:SetFrameStrata("MEDIUM")
+  mode:SetFrameLevel((anchor.GetFrameLevel and anchor:GetFrameLevel() or 0) + 8)
+  mode:RegisterForClicks("LeftButtonUp")
+  mode:SetBackdrop({
+    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Buttons\\UI-Quickslot2",
+    tile = true,
+    tileSize = 8,
+    edgeSize = 12,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 },
+  })
+  mode:SetBackdropColor(0.025, 0.04, 0.055, 0.96)
+
+  local modeLabel = MakeText(mode, "GameFontNormalSmall", "CHOD")
+  modeLabel:SetPoint("CENTER", mode, "CENTER", 0, 1)
+  mode.label = modeLabel
+  mode:SetScript("OnEnter", function()
+    GameTooltip:SetOwner(this, "ANCHOR_LEFT")
+    GameTooltip:SetText("Sdilene sipky: CHOD / CIL")
+    GameTooltip:AddLine("Kliknutim prepnes pohyb a zamerovani.", 1, 1, 1)
+    GameTooltip:Show()
+  end)
+  mode:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  mode:SetScript("OnClick", function()
+    if OctoPort.ToggleArrowInputMode then OctoPort:ToggleArrowInputMode() end
+  end)
+  self.arrowModeButton = mode
+  self:UpdateArrowModeButton()
 end
 
 function OctoPort:InitializeUI()
