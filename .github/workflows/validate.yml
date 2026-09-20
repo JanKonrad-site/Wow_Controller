@@ -15,44 +15,35 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y lua5.1 libxml2-utils
 
       - name: Check Lua syntax
-        run: luac5.1 -p Core.lua Bindings.lua UI.lua Radial.lua Quest.lua Loot.lua Menu.lua
+        run: luac5.1 -p Cleanup.lua Core.lua
 
-      - name: Test binding recovery and session restore
+      - name: Test native runtime and legacy cleanup
+        run: lua5.1 tests/minimal_runtime_harness.lua
+
+      - name: Check cleanup-only bindings XML
         run: |
-          lua5.1 tests/safety_harness.lua
-          lua5.1 tests/ui_harness.lua
-          lua5.1 tests/protected_actions_harness.lua
-          lua5.1 tests/integration_harness.lua
+          xmllint --noout Bindings.xml
+          test "$(grep -c 'OctoPort_LegacyNoop()' Bindings.xml)" -eq 22
+          ! grep -E '(ActionButton|UseAction|Target|MoveForward|MoveBackward|Strafe|TurnOrAction)' Bindings.xml
 
-      - name: Check bindings XML
-        run: xmllint --noout Bindings.xml
-
-      - name: Check safety invariants
+      - name: Check inert runtime
         run: |
-          test "$(grep -Ec '^[[:space:]]*SaveBindings\(' Bindings.lua)" -eq 0
-          test "$(grep -Ec '^[[:space:]]*SetBinding\(' Bindings.lua)" -eq 0
-          grep -q 'function OctoPort:SaveBindingsSafely' Bindings.lua
-          grep -q 'function OctoPort:SetBindingSafely' Bindings.lua
-          grep -q 'function OctoPort:RecoverLegacyBindings' Bindings.lua
-          grep -q 'RegisterEvent("PLAYER_LOGOUT")' Core.lua
-          grep -q 'RegisterEvent("PLAYER_REGEN_ENABLED")' Core.lua
-          ! grep -REn 'ActionButton_GetPagedID[[:space:]]*=' --include='*.lua' .
-          ! grep -REn 'UIParent_ManageFramePositions[[:space:]]*=' --include='*.lua' .
-          ! grep -REn 'SetParent\(' UI.lua
-          grep -q 'command = "MOVEFORWARD"' Bindings.lua
-          grep -q 'function OctoPort:CreateMinimapButton' UI.lua
-          grep -q 'function OctoPort:StartRawInputTest' Menu.lua
-          grep -q 'MULTIACTIONBAR1BUTTON8' Bindings.lua
-          grep -q 'MULTIACTIONBAR2BUTTON8' Bindings.lua
-          ! grep -q 'OCTOPORT_MOVE_' Bindings.xml
-          ! grep -REn '(MoveForward|MoveBackward|StrafeLeft|StrafeRight)(Start|Stop)\(' --include='*.lua' .
-          ! grep -REn '(UseAction|TurnOrActionStart|TurnOrActionStop|Jump|ToggleAutoRun)\(' --include='*.lua' Bindings.lua UI.lua
-          ! grep -REn 'TargetNearest(Friend|Enemy)\(' --include='*.lua' Bindings.lua
-          ! grep -REn 'string\.(match|gmatch)\(' --include='*.lua' Core.lua Bindings.lua UI.lua Radial.lua Quest.lua Loot.lua Menu.lua
+          ! grep -En '^[[:space:]]*(SetBinding|SaveBindings)\(' Core.lua
+          ! grep -REn '(UseAction|ActionButtonDown|ActionButtonUp|TargetNearest|MoveForward|MoveBackward|StrafeLeft|StrafeRight|TurnOrAction|Jump|ToggleAutoRun)\(' --include='*.lua' Cleanup.lua Core.lua
+          ! grep -REn '(CreateTexture|CreateFontString|UIPanelButtonTemplate|Minimap|WorldMap|QuestFrame)' --include='*.lua' Cleanup.lua Core.lua
+          test "$(grep -Ec 'CreateFrame\(' Core.lua)" -eq 1
+          test "$(grep -Ec 'CreateFrame\(' Cleanup.lua)" -eq 0
+          grep -q 'basicMigrationVersion' Cleanup.lua
+          grep -q 'bindingRecoverySnapshot' Cleanup.lua
+          grep -q 'PLAYER_REGEN_ENABLED' Core.lua
 
       - name: Check OctoLauncher layout
         run: |
           test -f Wow_Controller.toc
+          grep -q '^## Version: 1.0.0$' Wow_Controller.toc
+          grep -q '^Cleanup.lua$' Wow_Controller.toc
+          grep -q '^Core.lua$' Wow_Controller.toc
+          ! grep -Eq '^(Bindings|UI|Menu|Radial|Quest|Loot)\.lua$' Wow_Controller.toc
           while IFS= read -r file; do
             case "$file" in
               ""|'##'*) continue ;;

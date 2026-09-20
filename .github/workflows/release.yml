@@ -18,12 +18,9 @@ jobs:
       - name: Validate addon root
         run: |
           test -f Wow_Controller.toc
+          test -f Cleanup.lua
           test -f Core.lua
-          test -f UI.lua
-          test -f Radial.lua
-          test -f Quest.lua
-          test -f Loot.lua
-          test -f Menu.lua
+          test -f Bindings.xml
 
       - name: Build ZIP
         run: |
