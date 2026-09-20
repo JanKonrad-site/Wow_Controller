@@ -1,4 +1,4 @@
-WOW CONTROLLER 0.7.2 - ROG ALLY X / ARMOURY CRATE SE
+WOW CONTROLLER 0.8.0 - ROG ALLY X / ARMOURY CRATE SE
 ================================================
 
 RYCHLY START
@@ -12,18 +12,17 @@ RYCHLY START
 7. RB, RT, L3, R3, View, LB, LT, M1 a M2 jsou volitelne kroky.
 8. Zvol ZAPNOUT BEZPECNE a v DIAGNOSTICE over vsechny vstupy.
 
-KDYZ PROFIL JESTE NENI OPRAVENY
--------------------------------
+PRIME OVLADANI BEZ PREPINANI REZIMU
+-----------------------------------
 - RAW TEST uz Escape nezavira, ale ukaze jej jako vstup.
 - Stiskni libovolne tlacitko, ktere test vidi, a klikni VSTUP = MENU.
   Aktivuje se pouze tato jedna docasna vazba pro otevreni nastaveni.
-- Jestli leva packa ukazuje sipky, v Setupu klikni CHUZE ZE SIPEK. Sipky se
-  pouziji pro nativni pohyb, Escape pro menu a u minimapy se objevi CHOD/CIL.
-- CHOD pouziva sipky pro pohyb. CIL pouziva nahoru/dolu pro pratele a
-  vlevo/vpravo pro nepritele. Protoze packa i D-pad vysilaji stejne signaly,
-  oba fyzicke ovladace vzdy delaji akci z prave zvoleneho rezimu.
-- V RAW TESTU lze funkcni tlacitko priradit pres VSTUP = CHOD/CIL, aby se
-  rezim dal prepinat bez mysi a bez otevirani nastaveni.
+- Leva packa musi v RAW TESTU ukazat W/A/S/D.
+- D-pad musi ukazat UP/DOWN/LEFT/RIGHT. Jde o osm ruznych vstupu, diky kterym
+  funguje chuze a targeting soucasne. Pokud packa ukazuje sipky, oprav jeji
+  vystup v Armoury Crate; addon stejny signal fyzicky rozdelit nemuze.
+- V Setupu zvol NACIST ABXY 1-4 a postupne stiskni fyzicke A, B, X, Y. I kdyz
+  ted vysilaji Enter/Escape, za aktivni relace budou ovladat akce 1/2/3/4.
 
 Klient WoW 1.12 neumi XInput, proto Gamepad Mode nefunguje. Leva packa vysila
 W/A/S/D a addon je po dobu aktivni relace navaze primo na nativni pohybove
@@ -46,18 +45,18 @@ View              Libovolna klavesa    Nastaveni WOW Controller
 M1                Libovolna klavesa    Nastavitelna akce (vychozi nastaveni)
 M2                Libovolna klavesa    Nastavitelna akce (vychozi interakce)
 
-Volba ABXY = 1 2 3 4 v Setupu nastavi A/B/X/Y na nativni Blizzard akce 1-4.
-Nejprve ale v Armoury Crate nastav fyzicka tlacitka tak, aby opravdu vysilala
-klavesy 1/2/3/4. Predchozi herni bindy se po vypnuti nebo odhlaseni vrati.
+Volba NACIST ABXY 1-4 v Setupu zachyti skutecne vystupy fyzickych tlacitek a
+pripoji je k nativnim Blizzard akcim 1-4. Predchozi herni bindy se po vypnuti
+nebo odhlaseni vrati.
 
 U M1/M2 vypni v Armoury Crate volbu Set as Secondary Function. Tlacitka Command
 Center a Armoury Crate jsou systemova a nelze je premapovat ani zachytit addonem.
 Pokud leva packa v RAW TESTU ukazuje sipky, sdili signal s D-padem a addon je
 nemuze rozlisit. Oprav levou packu na W/A/S/D v hernim Desktop Mode profilu.
 
-BEZPECNY PROFIL
----------------
-A/B/X/Y           F9/F10/F11/F12
+BEZPECNY PRIMY PROFIL
+---------------------
+A/B/X/Y           1/2/3/4
 D-pad             Sipky
 Menu              F8
 LB/LT             Shift/Ctrl
@@ -76,17 +75,17 @@ OVLADANI VE HRE
 /octoport setup             Pruvodce mapovanim
 /octoport diagnostics       Zivy test vstupu
 /octoport test              Raw test skutecnych signalu
-/octoport arrows            Nouzova chuze, kdyz packa vysila sipky
-/octoport mode              Prepnout sdilene sipky mezi CHOD a CIL
 /octoport preset            Bezpecny session-only profil
 /octoport restore           Nouzove vycistit bindy a addon vypnout
 /octoport wheel             Editor radialniho kola
 
-V Controller menu meni D-pad vlevo/vpravo zalozku, nahoru/dolu vyber, A potvrdi
-a B zavre. Ve hre D-pad nahoru/dolu prepina pratele a vlevo/vpravo nepritele.
+V Controller menu meni D-pad vlevo/vpravo zalozku a nahoru/dolu vyber; RB/levy
+klik potvrzuje a View menu otevira/zavira. Ve hre D-pad nahoru/dolu prepina
+pratele a vlevo/vpravo nepritele.
 Podrzenim Menu se otevre radialni kolo; smer vyber pravou packou nebo D-padem.
-Leva packa ovlada nativni pohyb. Controller menu a radial se ovladaji D-padem. Zamerovac uprostred je cerveny pro nepritele, zeleny
-pro pratele a ukazuje zdravi cile. Akce M1/M2 zmenis v zalozce HRANI.
+Leva packa ovlada nativni pohyb. Controller menu a radial se ovladaji D-padem.
+Stary stredovy zamerovac se ve verzi 0.8 uz nenacita. Akce M1/M2 zmenis v
+zalozce HRANI.
 
 BEZPECNOST HESLA
 ----------------

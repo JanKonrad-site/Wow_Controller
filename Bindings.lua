@@ -10,10 +10,10 @@ local bindingDefinitions = {
   { id = "LSDOWN", label = "L-Stick Down",  command = "MOVEBACKWARD", defaultKey = "S", required = true, movement = "backward" },
   { id = "LSLEFT", label = "L-Stick Left",  command = "STRAFELEFT",   defaultKey = "A", required = true, movement = "left" },
   { id = "LSRIGHT", label = "L-Stick Right", command = "STRAFERIGHT", defaultKey = "D", required = true, movement = "right" },
-  { id = "A",      label = "A",           command = "OCTOPORT_ACTION_A",     defaultKey = "F9",    required = true },
-  { id = "B",      label = "B",           command = "OCTOPORT_ACTION_B",     defaultKey = "F10",   required = true },
-  { id = "X",      label = "X",           command = "OCTOPORT_ACTION_X",     defaultKey = "F11",   required = true },
-  { id = "Y",      label = "Y",           command = "OCTOPORT_ACTION_Y",     defaultKey = "F12",   required = true },
+  { id = "A",      label = "A / Action 1", command = "OCTOPORT_ACTION_A",    defaultKey = "1",     required = true, nativeAction = true },
+  { id = "B",      label = "B / Action 2", command = "OCTOPORT_ACTION_B",    defaultKey = "2",     required = true, nativeAction = true },
+  { id = "X",      label = "X / Action 3", command = "OCTOPORT_ACTION_X",    defaultKey = "3",     required = true, nativeAction = true },
+  { id = "Y",      label = "Y / Action 4", command = "OCTOPORT_ACTION_Y",    defaultKey = "4",     required = true, nativeAction = true },
   { id = "DUP",    label = "D-Pad Up",    command = "OCTOPORT_TARGET_UP",    defaultKey = "UP",    required = true },
   { id = "DDOWN",  label = "D-Pad Down",  command = "OCTOPORT_TARGET_DOWN",  defaultKey = "DOWN",  required = true },
   { id = "DLEFT",  label = "D-Pad Left",  command = "OCTOPORT_TARGET_LEFT",  defaultKey = "LEFT",  required = true },
@@ -29,7 +29,6 @@ local bindingDefinitions = {
   { id = "L3",     label = "L3 / Auto Run", command = "TOGGLEAUTORUN", defaultKey = "NUMLOCK", nativeAction = true },
   { id = "R3",     label = "R3 / Jump",     command = "JUMP",          defaultKey = "SPACE",   nativeAction = true },
   { id = "VIEW",   label = "View / Settings", command = "OCTOPORT_OPENCONFIG", defaultKey = "F7" },
-  { id = "MODE",   label = "Walk / Target Mode", command = "OCTOPORT_TOGGLEMODE", defaultKey = "F4" },
   { id = "M1",     label = "Rear M1",     command = "OCTOPORT_REAR_M1",      defaultKey = "F6" },
   { id = "M2",     label = "Rear M2",     command = "OCTOPORT_REAR_M2",      defaultKey = "F5" },
 }
@@ -62,7 +61,7 @@ local legacyCommands = {
 
 OctoPort.bindingDefinitions = bindingDefinitions
 
-local rearActionOrder = { "settings", "interact", "jump", "autorun", "bags", "map", "target", "reticle", "radial" }
+local rearActionOrder = { "settings", "interact", "jump", "autorun", "bags", "map", "target", "radial" }
 local rearActionLabels = {
   settings = "Settings",
   interact = "Interact",
@@ -71,7 +70,6 @@ local rearActionLabels = {
   bags = "Bags",
   map = "Map",
   target = "Next enemy",
-  reticle = "Reticle",
   radial = "Radial wheel",
 }
 
@@ -94,13 +92,6 @@ end
 local function IsModifier(key)
   return key == "SHIFT" or key == "CTRL" or key == "ALT"
 end
-
-local fallbackTargetKeys = {
-  DUP = "UP",
-  DDOWN = "DOWN",
-  DLEFT = "LEFT",
-  DRIGHT = "RIGHT",
-}
 
 local nativeFaceCommands = {
   A = "ACTIONBUTTON1",
@@ -150,6 +141,46 @@ function OctoPort:EnsureMovementDefaults()
   self.config.movementBindingVersion = 2
 end
 
+function OctoPort:EnsureDirectControlDefaults()
+  if not self.config then return false end
+  if (tonumber(self.config.bindingVersion) or 0) >= 10 then return false end
+
+  self.config.controllerKeys = self.config.controllerKeys or {}
+  local keys = self.config.controllerKeys
+  local sharedArrows = self.config.arrowMovementFallback and true or false
+
+  -- Versions 0.7.1/0.7.2 could put both physical controls behind the same
+  -- arrow signals. Version 0.8 deliberately requires separate device output:
+  -- W/A/S/D for the stick and arrows for the D-pad.
+  if sharedArrows then
+    keys.LSUP, keys.LSDOWN = "W", "S"
+    keys.LSLEFT, keys.LSRIGHT = "A", "D"
+    keys.DUP, keys.DDOWN = "UP", "DOWN"
+    keys.DLEFT, keys.DRIGHT = "LEFT", "RIGHT"
+  end
+
+  local oldFaceDefaults = { A = "F9", B = "F10", X = "F11", Y = "F12" }
+  local directFaceDefaults = { A = "1", B = "2", X = "3", Y = "4" }
+  for id, key in pairs(directFaceDefaults) do
+    if not keys[id] or keys[id] == oldFaceDefaults[id] then keys[id] = key end
+  end
+
+  for index = 1, table.getn(bindingDefinitions) do
+    local definition = bindingDefinitions[index]
+    if definition.defaultKey and not definition.layer and not keys[definition.id] then
+      keys[definition.id] = definition.defaultKey
+    end
+  end
+
+  self.config.arrowMovementFallback = false
+  self.config.arrowInputMode = nil
+  self.config.menuOnlyMode = false
+  self.config.nativeFaceButtons = true
+  self.config.reticleEnabled = false
+  self.config.lastBindingCollision = nil
+  return true
+end
+
 function OctoPort:GetControllerBindingKey(definition)
   if type(definition) ~= "table" then definition = FindDefinition(definition) end
   if not definition or not self.config then return nil end
@@ -167,14 +198,13 @@ function OctoPort:RefreshSetupState()
   local complete = true
   for index = 1, table.getn(bindingDefinitions) do
     local definition = bindingDefinitions[index]
-    local fallbackTarget = self.config.arrowMovementFallback and (definition.id == "DUP" or definition.id == "DDOWN" or definition.id == "DLEFT" or definition.id == "DRIGHT")
-    if definition.required and not fallbackTarget and not self:GetControllerBindingKey(definition) then
+    if definition.required and not self:GetControllerBindingKey(definition) then
       complete = false
       break
     end
   end
   self.config.setupComplete = complete
-  if complete then self.config.bindingVersion = 9 end
+  if complete then self.config.bindingVersion = 10 end
   if self.RefreshBindingMenu then self:RefreshBindingMenu() end
   return complete
 end
@@ -186,10 +216,6 @@ function OctoPort:BindControllerKey(definition, key)
 
   self.config.controllerKeys = self.config.controllerKeys or {}
   self.config.nativeModifiers = self.config.nativeModifiers or {}
-  if definition.id == "A" or definition.id == "B" or definition.id == "X" or definition.id == "Y" then
-    self.config.nativeFaceButtons = false
-  end
-
   -- One physical key may own only one controller action. Keep a visible
   -- record when a new capture displaced an older control; this is the most
   -- common sign that Armoury Crate sends arrows for both the stick and D-pad.
@@ -255,52 +281,15 @@ function OctoPort:ApplyRecommendedBindings()
   end
 
   self.config.movementBindingVersion = 2
-  self.config.bindingVersion = 9
+  self.config.bindingVersion = 10
   self.config.lastBindingCollision = nil
   self.config.arrowMovementFallback = false
-  self.config.arrowInputMode = "movement"
   self.config.menuOnlyMode = false
-  self.config.nativeFaceButtons = false
+  self.config.nativeFaceButtons = true
+  self.config.reticleEnabled = false
   self:RefreshSetupState()
   if self.config.enabled then self:ActivateSessionBindings() end
-  self:Print("Safe ROG Ally profile selected. It is session-only and does not overwrite saved WoW bindings.")
-end
-
-function OctoPort:ApplyArrowMovementFallback()
-  if not self.config then self:InitializeConfig() end
-  if self.sessionBindingsActive then self:DeactivateSessionBindings() end
-
-  self.config.enabled = false
-  self.config.controllerKeys = {}
-  self.config.nativeModifiers = { SHIFT = "shift", CTRL = "ctrl" }
-
-  for index = 1, table.getn(bindingDefinitions) do
-    local definition = bindingDefinitions[index]
-    local target = definition.id == "DUP" or definition.id == "DDOWN" or definition.id == "DLEFT" or definition.id == "DRIGHT"
-    if definition.defaultKey and not definition.layer and not target then
-      self.config.controllerKeys[definition.id] = definition.defaultKey
-    end
-  end
-
-  self.config.controllerKeys.LSUP = "UP"
-  self.config.controllerKeys.LSDOWN = "DOWN"
-  self.config.controllerKeys.LSLEFT = "LEFT"
-  self.config.controllerKeys.LSRIGHT = "RIGHT"
-  self.config.controllerKeys.VIEW = "ESCAPE"
-  self.config.arrowMovementFallback = true
-  self.config.arrowInputMode = "movement"
-  self.config.menuOnlyMode = false
-  self.config.nativeFaceButtons = false
-  self.config.lastBindingCollision = nil
-  self.config.movementBindingVersion = 2
-  self.config.bindingVersion = 9
-  self:RefreshSetupState()
-
-  self.config.enabled = true
-  self:ActivateSessionBindings()
-  if self.SetUIEnabled then self:SetUIEnabled(true) end
-  if self.UpdateArrowModeButton then self:UpdateArrowModeButton() end
-  self:Print("Shared-arrow mode enabled. MOVE is active; use the CHOD/CIL button to switch the same arrows to targeting. Escape opens Controller settings.")
+  self:Print("Direct ROG Ally profile selected: stick W/A/S/D, D-pad arrows and ABXY action slots 1-4. Bindings are session-only.")
 end
 
 function OctoPort:ApplyNativeFaceButtons()
@@ -309,15 +298,15 @@ function OctoPort:ApplyNativeFaceButtons()
   if self.sessionBindingsActive then self:DeactivateSessionBindings() end
   self.config.enabled = false
   self.config.controllerKeys = self.config.controllerKeys or {}
-  self.config.controllerKeys.A = "1"
-  self.config.controllerKeys.B = "2"
-  self.config.controllerKeys.X = "3"
-  self.config.controllerKeys.Y = "4"
+  self.config.controllerKeys.A = self.config.controllerKeys.A or "1"
+  self.config.controllerKeys.B = self.config.controllerKeys.B or "2"
+  self.config.controllerKeys.X = self.config.controllerKeys.X or "3"
+  self.config.controllerKeys.Y = self.config.controllerKeys.Y or "4"
   self.config.nativeFaceButtons = true
   self.config.enabled = wasEnabled
   self:RefreshSetupState()
   if wasEnabled then self:ActivateSessionBindings() end
-  self:Print("ABXY profile selected: A=1, B=2, X=3, Y=4 using native Blizzard action buttons. Armoury Crate must emit those keys.")
+  self:Print("ABXY now use native Blizzard action slots 1-4 through the captured physical buttons.")
 end
 
 function OctoPort:SetQuickMenuKey(key)
@@ -335,38 +324,6 @@ function OctoPort:SetQuickMenuKey(key)
   self:ActivateSessionBindings()
   if self.SetUIEnabled then self:SetUIEnabled(true) end
   self:Print(key .. " now opens WOW Controller. The binding is session-only and will be restored on logout or disable.")
-  return true
-end
-
-function OctoPort:SetQuickModeKey(key)
-  if not key or key == "" or key == "UNKNOWN" then return false end
-  if key == "UP" or key == "DOWN" or key == "LEFT" or key == "RIGHT" then
-    self:Print("Choose a button, not one of the shared arrow directions, for the mode switch.")
-    return false
-  end
-  if not self.config then self:InitializeConfig() end
-  if not self.config.arrowMovementFallback then self:ApplyArrowMovementFallback() end
-  if self.sessionBindingsActive then self:DeactivateSessionBindings() end
-  self.config.enabled = false
-  self:BindControllerKey("MODE", key)
-  self.config.lastBindingCollision = nil
-  self.config.menuOnlyMode = false
-  self.config.enabled = true
-  self:ActivateSessionBindings()
-  if self.UpdateArrowModeButton then self:UpdateArrowModeButton() end
-  self:Print(key .. " now switches shared arrows between MOVE and TARGET modes.")
-  return true
-end
-
-function OctoPort:ToggleArrowInputMode()
-  if not self.config or not self.config.arrowMovementFallback then
-    self:Print("The MOVE/TARGET switch is only needed when the stick and D-pad share arrow keys.")
-    return false
-  end
-  self.config.arrowInputMode = self.config.arrowInputMode == "target" and "movement" or "target"
-  if self.config.enabled then self:ActivateSessionBindings() end
-  if self.UpdateArrowModeButton then self:UpdateArrowModeButton() end
-  self:Print(self.config.arrowInputMode == "target" and "TARGET mode: arrows cycle friends/enemies." or "MOVE mode: arrows move the character.")
   return true
 end
 
@@ -398,14 +355,6 @@ function OctoPort:ActivateSessionBindings()
     local key = self.config.controllerKeys and self.config.controllerKeys[definition.id]
     local command = definition.command
     local allowedByMode = not self.config.menuOnlyMode or definition.id == "VIEW"
-    if self.config.arrowMovementFallback then
-      if self.config.arrowInputMode == "target" then
-        if definition.movement then key = nil end
-        if fallbackTargetKeys[definition.id] then key = fallbackTargetKeys[definition.id] end
-      elseif fallbackTargetKeys[definition.id] then
-        key = nil
-      end
-    end
     if self.config.nativeFaceButtons and nativeFaceCommands[definition.id] then
       command = nativeFaceCommands[definition.id]
     end
@@ -467,8 +416,7 @@ function OctoPort:RestoreBindings()
   self.config.enabled = false
   self.config.menuOnlyMode = false
   self.config.arrowMovementFallback = false
-  self.config.arrowInputMode = "movement"
-  self.config.nativeFaceButtons = false
+  self.config.nativeFaceButtons = true
   self:DeactivateSessionBindings()
   self:RecoverLegacyBindings(true)
   if self.SetUIEnabled then self:SetUIEnabled(false) end
@@ -529,9 +477,6 @@ function OctoPort:HandleRearAction(button, keystate)
   elseif action == "target" then
     TargetNearestEnemy()
     if self.TargetChanged then self:TargetChanged("right") end
-  elseif action == "reticle" then
-    self.config.reticleEnabled = not self.config.reticleEnabled
-    if self.UpdateReticle then self:UpdateReticle(true) end
   end
 end
 
@@ -590,14 +535,6 @@ function OctoPort_OpenConfig()
   if not OctoPort then return end
   OctoPort:SignalInput("VIEW")
   if not OctoPort.bindingCaptureActive and OctoPort.ToggleConfig then OctoPort:ToggleConfig() end
-end
-
-function OctoPort_ToggleMode()
-  if not OctoPort then return end
-  OctoPort:SignalInput("MODE")
-  if not OctoPort.bindingCaptureActive and OctoPort.ToggleArrowInputMode then
-    OctoPort:ToggleArrowInputMode()
-  end
 end
 
 function OctoPort_ToggleBags()
