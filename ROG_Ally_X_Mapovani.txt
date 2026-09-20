@@ -1,4 +1,4 @@
-WOW CONTROLLER 0.6.0 - ROG ALLY X / ARMOURY CRATE SE
+WOW CONTROLLER 0.6.1 - ROG ALLY X / ARMOURY CRATE SE
 ================================================
 
 RYCHLY START
@@ -11,7 +11,8 @@ RYCHLY START
 6. Zvol ZAPNOUT BEZPECNE a v DIAGNOSTICE over tlacitka i pravou packu.
 
 Klient WoW 1.12 neumi XInput, proto Gamepad Mode nefunguje. Leva packa vysila
-W/A/S/D a addon je po dobu aktivni relace prevadi na nativni pohyb WoW; prava
+W/A/S/D a addon je po dobu aktivni relace navaze primo na nativni pohybove
+prikazy Blizzard UI; nevola z Lua chranene pohybove funkce. Prava
 packa zustava mysi. Addon zachyti skutecnou klavesu nebo klik,
 ktery Armoury Crate posila. Pokud se pruvodce po stisku neposune, dane tlacitko
 neposila do WoW zadny klavesnicovy/mysi signal. V hernim Desktop Mode profilu mu
@@ -19,7 +20,7 @@ prirad libovolnou nepouzitou klavesu a zkus stisk znovu.
 
 DOPORUCENE MAPOVANI MIMO PRUVODCE
 ---------------------------------
-Leva packa        W / A / S / D       Pohyb + navigace v menu/radialu
+Leva packa        W / A / S / D       Nativni pohyb Blizzard UI
 Prava packa       Mouse                Kurzor / kamera / radialni vyber
 RB                Levy klik            Vyber v UI
 RT                Pravy klik           Kamera / interakce
@@ -56,7 +57,7 @@ OVLADANI VE HRE
 V Controller menu meni D-pad vlevo/vpravo zalozku, nahoru/dolu vyber, A potvrdi
 a B zavre. Ve hre D-pad nahoru/dolu prepina pratele a vlevo/vpravo nepritele.
 Podrzenim Menu se otevre radialni kolo; smer vyber pravou packou nebo D-padem.
-Leva packa ovlada pohyb; v Controller menu a radialu slouzi jako smerova navigace. Zamerovac uprostred je cerveny pro nepritele, zeleny
+Leva packa ovlada nativni pohyb. Controller menu a radial se ovladaji D-padem. Zamerovac uprostred je cerveny pro nepritele, zeleny
 pro pratele a ukazuje zdravi cile. Akce M1/M2 zmenis v zalozce HRANI.
 
 BEZPECNOST HESLA

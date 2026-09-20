@@ -36,16 +36,6 @@ function GetTime()
   return 1
 end
 
-local movement = {}
-function MoveForwardStart() movement.forward = "down" end
-function MoveForwardStop() movement.forward = "up" end
-function MoveBackwardStart() movement.backward = "down" end
-function MoveBackwardStop() movement.backward = "up" end
-function StrafeLeftStart() movement.left = "down" end
-function StrafeLeftStop() movement.left = "up" end
-function StrafeRightStart() movement.right = "down" end
-function StrafeRightStop() movement.right = "up" end
-
 OctoPort = {
   config = {
     enabled = false,
@@ -70,7 +60,7 @@ assert(saveCount == 0, "movement defaults persisted bindings")
 
 -- Setup stores a profile but must not touch or persist WoW bindings.
 bindings.F9 = "OPENCHAT"
-bindings.W = "MOVEFORWARD"
+bindings.W = "OPENCHAT"
 OctoPort:ApplyRecommendedBindings()
 assert(bindings.F9 == "OPENCHAT", "profile selection changed a live binding")
 assert(saveCount == 0, "normal profile selection persisted bindings")
@@ -79,28 +69,15 @@ assert(saveCount == 0, "normal profile selection persisted bindings")
 OctoPort.config.enabled = true
 assert(OctoPort:ActivateSessionBindings(), "session profile did not activate")
 assert(bindings.F9 == "OCTOPORT_ACTION_A", "temporary A binding missing")
-assert(bindings.W == "OCTOPORT_MOVE_FORWARD", "temporary movement binding missing")
-OctoPort_Move("forward", "down")
-assert(movement.forward == "down", "left stick did not start native movement")
-OctoPort_Move("forward", "up")
-assert(movement.forward == "up", "left stick did not stop native movement")
-
--- Open controller panels consume the stick direction instead of moving the
--- character, matching the controller-first navigation behavior.
-movement.forward = nil
-local menuDirection = nil
-function OctoPort:HandleConfigDirection(direction)
-  menuDirection = direction
-  return true
-end
-OctoPort_Move("forward", "down")
-assert(menuDirection == "up", "left stick did not navigate the controller menu")
-assert(movement.forward == nil, "menu navigation also moved the character")
-OctoPort.HandleConfigDirection = nil
+assert(bindings.W == "MOVEFORWARD", "native forward binding missing")
+assert(bindings.S == "MOVEBACKWARD", "native backward binding missing")
+assert(bindings.A == "STRAFELEFT", "native left strafe binding missing")
+assert(bindings.D == "STRAFERIGHT", "native right strafe binding missing")
 assert(saveCount == 0, "session activation persisted bindings")
 OctoPort:DeactivateSessionBindings()
 assert(bindings.F9 == "OPENCHAT", "session cleanup did not restore original A binding")
-assert(bindings.W == "MOVEFORWARD", "session cleanup did not restore original movement binding")
+assert(bindings.W == "OPENCHAT", "session cleanup did not restore original movement binding")
+assert(bindings.S == nil and bindings.A == nil and bindings.D == nil, "session cleanup left native movement bindings behind")
 assert(saveCount == 0, "session cleanup persisted bindings")
 
 -- Migration is intentionally the sole persistent write. It repairs commands
