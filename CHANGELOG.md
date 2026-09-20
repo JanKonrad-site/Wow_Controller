@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.1
+
+- Fixed the OctoWoW "action only available to the Blizzard UI" error when moving.
+- Removed all addon calls to protected movement start/stop functions.
+- Left-stick keys now bind directly to Blizzard's native `MOVEFORWARD`, `MOVEBACKWARD`, `STRAFELEFT` and `STRAFERIGHT` commands.
+- Preserved session-only activation and exact restoration of the player's original bindings.
+- Added a CI guard that rejects protected movement-function calls in future versions.
+
 ## 0.6.0
 
 - Restored four-direction left-stick movement using the keyboard signals emitted by Armoury Crate or Steam Input.

@@ -1,8 +1,8 @@
 # WOW Controller
 
-Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. Version 0.6 restores ConsoleExperience-style left-stick movement without giving up the v0.5 safety model: installation is inert, old persisted `OCTOPORT_*` bindings are repaired once, and controller bindings exist only for the current WoW session.
+Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. Version 0.6.1 restores ConsoleExperience-style left-stick movement without calling protected movement functions: installation is inert, old persisted `OCTOPORT_*` bindings are repaired once, and controller bindings exist only for the current WoW session.
 
-OctoWoW's 1.12 client has no native XInput support. Armoury Crate SE or Steam Input must convert the physical controller to keyboard/mouse signals. The addon captures the four left-stick signals and routes them to WoW's native movement functions; the right stick remains a mouse. This is the same device-side principle used by ConsoleExperienceClassic, while WOW Controller keeps every binding temporary and reversible.
+OctoWoW's 1.12 client has no native XInput support. Armoury Crate SE or Steam Input must convert the physical controller to keyboard/mouse signals. The addon binds the four left-stick signals directly to Blizzard's native movement commands; it never calls the protected movement functions from Lua. The right stick remains a mouse. This is the same device-side principle used by ConsoleExperienceClassic, while WOW Controller keeps every binding temporary and reversible.
 
 ## Safety model
 
@@ -39,7 +39,7 @@ Recommended device-side controls that do not need the wizard:
 
 | ROG Ally control | Armoury Crate output | Purpose |
 |---|---|---|
-| Left stick | W / A / S / D | Captured by WOW Controller; native movement and menu navigation |
+| Left stick | W / A / S / D | Direct Blizzard movement bindings |
 | Right stick | Mouse | Camera, cursor and radial direction |
 | RB | Left mouse button | UI click |
 | RT | Right mouse button | Camera and world interaction |
@@ -64,8 +64,8 @@ Inside the menu, D-pad left/right changes tabs, up/down moves focus, A activates
 ## Default behavior
 
 - D-pad Up/Down cycles friendly targets; Left/Right cycles enemy targets.
-- Left stick drives WoW's native forward/backward/strafe functions. Its four emitted keys are active only during the controller session and are restored exactly when the addon is disabled or the player logs out.
-- When Controller settings or the radial wheel is open, the left stick changes to directional menu navigation and does not move the character.
+- Left stick drives Blizzard's native forward/backward/strafe binding commands. Its four emitted keys are active only during the controller session and are restored exactly when the addon is disabled or the player logs out.
+- D-pad controls Controller settings and cardinal radial selection; movement keys remain owned by Blizzard UI to avoid protected-action blocking.
 - The center reticle is cyan without a target, red for enemies and green for friendly targets; it also shows target health.
 - A confirms visible dialogs or uses face action 1. B closes/cancels or uses face action 2. X/Y use face actions 3/4.
 - LB and LT select the second and third four-action layers. They can be native Shift/Ctrl or ordinary mapped keys.

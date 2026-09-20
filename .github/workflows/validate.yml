@@ -31,8 +31,9 @@ jobs:
           ! grep -REn 'ActionButton_GetPagedID[[:space:]]*=' --include='*.lua' .
           ! grep -REn 'UIParent_ManageFramePositions[[:space:]]*=' --include='*.lua' .
           ! grep -REn 'SetParent\(' UI.lua
-          grep -q 'OCTOPORT_MOVE_FORWARD' Bindings.xml
-          grep -q 'function OctoPort_Move' Bindings.lua
+          grep -q 'command = "MOVEFORWARD"' Bindings.lua
+          ! grep -q 'OCTOPORT_MOVE_' Bindings.xml
+          ! grep -REn '(MoveForward|MoveBackward|StrafeLeft|StrafeRight)(Start|Stop)\(' --include='*.lua' .
 
       - name: Check OctoLauncher layout
         run: |

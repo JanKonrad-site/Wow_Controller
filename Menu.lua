@@ -318,7 +318,12 @@ function OctoPort:UpdateInputDiagnostics()
     elseif row.id == "RSTICK" and self.lastRightStickAt and now - self.lastRightStickAt < 0.65 then
       active = true
     end
-    if active then
+    if row.nativeMovement and self:GetControllerBindingKey(row.id) then
+      row:SetBackdropColor(0.04, 0.18, 0.34, 0.98)
+      row:SetBackdropBorderColor(0.28, 0.62, 1.00, 1)
+      row.state:SetText("NATIVE")
+      row.state:SetTextColor(0.38, 0.72, 1.00)
+    elseif active then
       row:SetBackdropColor(0.04, 0.38, 0.28, 0.98)
       row:SetBackdropBorderColor(0.30, 1.00, 0.62, 1)
       row.state:SetText("SIGNAL")
@@ -353,7 +358,7 @@ local function BuildSetupPanel(panel)
   title:SetTextColor(0.24, 0.84, 0.81)
 
   local body = MakeLabel(panel, "GameFontHighlightSmall",
-    "BEZPECNY REZIM: klavesy ovladace se pouziji jen po zapnuti a jen pro aktualni relaci; pri vypnuti nebo odhlaseni se puvodni vazby vrati. Leva packa se zachyti jako ctyri smery a ve hre spousti nativni pohyb WoW. Prava packa zustava mysi.", 470)
+    "BEZPECNY REZIM: klavesy ovladace se pouziji jen po zapnuti a jen pro aktualni relaci; pri vypnuti nebo odhlaseni se puvodni vazby vrati. Leva packa je navazana primo na nativni pohyb Blizzard UI, bez chranenych Lua volani. Prava packa zustava mysi.", 470)
   body:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -16)
   body:SetJustifyH("LEFT")
   body:SetJustifyV("TOP")
@@ -439,7 +444,7 @@ local function BuildControlsPanel(panel)
   end))
   wizard:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 0)
 
-  local help = MakeLabel(panel, "GameFontDisableSmall", "Leva packa i D-pad ovladaji menu. A potvrdi, B zavre.", 300)
+  local help = MakeLabel(panel, "GameFontDisableSmall", "D-pad ovlada menu. A potvrdi, B zavre.", 300)
   help:SetPoint("LEFT", wizard, "RIGHT", 12, 0)
 end
 
@@ -557,7 +562,7 @@ local function BuildDiagnosticsPanel(panel)
   title:SetTextColor(0.24, 0.84, 0.81)
 
   local body = MakeLabel(panel, "GameFontHighlightSmall",
-    "Stiskni jednotliva tlacitka. Zelene SIGNAL potvrzuje, ze klavesa prosla pres Armoury Crate, WoW binding i addon.", 470)
+    "Stiskni jednotliva tlacitka. Zelene SIGNAL potvrzuje vstup addonu. Modre NATIVE u leve packy znamena primy Blizzard binding; ten otestuj pohybem postavy ve svete.", 470)
   body:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
   body:SetJustifyH("LEFT")
 
@@ -599,6 +604,7 @@ local function BuildDiagnosticsPanel(panel)
     state:SetJustifyH("RIGHT")
 
     row.id = definition.id
+    row.nativeMovement = definition.movement
     row.state = state
     OctoPort.diagnosticRows[index] = row
   end

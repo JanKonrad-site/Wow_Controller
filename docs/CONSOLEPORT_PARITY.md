@@ -8,10 +8,10 @@ the current OctoLauncher entry expects one addon TOC in the repository root.
 
 ## Compatibility decision
 
-| ConsolePort area | 1.12 implementation | Status after 0.6.0 |
+| ConsolePort area | 1.12 implementation | Status after 0.6.1 |
 |---|---|---|
 | Controller setup | Capture keyboard/mouse signals produced by Armoury Crate | Safe session-only setup |
-| Character movement | Four left-stick key signals routed to native WoW movement start/stop functions | Implemented; session-only and reversible |
+| Character movement | Four left-stick key signals bound directly to Blizzard movement commands | Implemented; protected-Lua-free, session-only and reversible |
 | Action bars | Addon-owned visual mirrors of Blizzard action slots | Safe base implemented |
 | Modifier layers | Shift/Ctrl or mapped LB/LT layers | Implemented |
 | Targeting | Friendly/enemy cycling through 1.12 targeting API | Implemented; hardware test required |
