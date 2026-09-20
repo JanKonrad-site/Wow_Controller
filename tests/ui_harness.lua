@@ -36,27 +36,47 @@ Minimap = NewRegion()
 GameTooltip = NewRegion()
 function GameTooltip:SetOwner() end
 function GameTooltip:AddLine() end
+function GameTooltip:SetAction() end
 function GetCursorPosition() return 100, 100 end
 function GetTime() return 1 end
-function IsShiftKeyDown() return false end
-function IsControlKeyDown() return false end
+local shiftDown = false
+local controlDown = false
+function IsShiftKeyDown() return shiftDown end
+function IsControlKeyDown() return controlDown end
 function IsAltKeyDown() return false end
 
+local pickedAction = nil
+function PickupAction(action) pickedAction = action end
+function PlaceAction(action) pickedAction = action end
+
 OctoPort = {
-  version = "0.8.0",
+  version = "0.9.0",
   config = {
     enabled = false,
-    controllerKeys = { LSUP = "W", RB = "BUTTON1" },
-    nativeModifiers = { SHIFT = "shift", CTRL = "ctrl" },
+    controllerKeys = {
+      LSUP = "W", LSDOWN = "S", LSLEFT = "A", LSRIGHT = "D",
+      DUP = "UP", DDOWN = "DOWN", DLEFT = "LEFT", DRIGHT = "RIGHT",
+      LB = "BUTTON1", RB = "BUTTON2",
+    },
+    nativeModifiers = { SHIFT = "lt", CTRL = "rt" },
   },
   bindingDefinitions = {
     { id = "LSUP", label = "L-Stick Up", command = "MOVEFORWARD", movement = "forward" },
+    { id = "LSDOWN", label = "L-Stick Down", command = "MOVEBACKWARD", movement = "backward" },
+    { id = "LSLEFT", label = "L-Stick Left", command = "STRAFELEFT", movement = "left" },
+    { id = "LSRIGHT", label = "L-Stick Right", command = "STRAFERIGHT", movement = "right" },
     { id = "A", label = "A / Action 1", command = "OCTOPORT_ACTION_A", required = true, nativeAction = true },
     { id = "B", label = "B / Action 2", command = "OCTOPORT_ACTION_B", required = true, nativeAction = true },
     { id = "X", label = "X / Action 3", command = "OCTOPORT_ACTION_X", required = true, nativeAction = true },
     { id = "Y", label = "Y / Action 4", command = "OCTOPORT_ACTION_Y", required = true, nativeAction = true },
-    { id = "LB", label = "LB layer", command = "OCTOPORT_LAYER_LB", layer = "shift" },
-    { id = "RB", label = "RB / Left Click", passthrough = true },
+    { id = "DUP", label = "D-Pad Up", command = "OCTOPORT_TARGET_UP", required = true },
+    { id = "DDOWN", label = "D-Pad Down", command = "OCTOPORT_TARGET_DOWN", required = true },
+    { id = "DLEFT", label = "D-Pad Left", command = "OCTOPORT_TARGET_LEFT", required = true },
+    { id = "DRIGHT", label = "D-Pad Right", command = "OCTOPORT_TARGET_RIGHT", required = true },
+    { id = "LT", label = "LT / Action layer", command = "OCTOPORT_LAYER_LT", layer = "lt" },
+    { id = "RT", label = "RT / Action layer", command = "OCTOPORT_LAYER_RT", layer = "rt" },
+    { id = "LB", label = "LB / Mouse Left", passthrough = true },
+    { id = "RB", label = "RB / Mouse Right", passthrough = true },
   },
 }
 
@@ -102,7 +122,7 @@ assert(string.find(OctoPort.rawTestFrame.last.text, "L%-Stick Up"), "raw keyboar
 
 arg1 = "LSHIFT"
 OctoPort.rawTestFrame.scripts.OnKeyDown()
-assert(string.find(OctoPort.rawTestFrame.last.text, "LB layer", 1, true), "left/right modifier signal was not normalized")
+assert(string.find(OctoPort.rawTestFrame.last.text, "LT / Action layer", 1, true), "left/right modifier signal was not normalized")
 
 arg1 = "ESCAPE"
 OctoPort.rawTestFrame.scripts.OnKeyDown()
@@ -114,7 +134,7 @@ assert(OctoPort.testMenuKey == "ESCAPE", "last working input could not be assign
 OctoPort.rawTestFrame:Show()
 arg1 = "LeftButton"
 OctoPort.rawTestFrame.scripts.OnMouseDown()
-assert(string.find(OctoPort.rawTestFrame.last.text, "RB / Left Click", 1, true), "raw mouse signal was not identified")
+assert(string.find(OctoPort.rawTestFrame.last.text, "LB / Mouse Left", 1, true), "raw mouse signal was not identified")
 
 -- The focused ABXY wizard captures the physical signals actually emitted by
 -- Desktop Mode, including Enter/Escape, while selecting native action slots.
@@ -133,5 +153,35 @@ assert(OctoPort.config.controllerKeys.A == "ENTER", "physical A was not captured
 assert(OctoPort.config.controllerKeys.B == "ESCAPE", "physical B was not captured")
 assert(OctoPort.config.controllerKeys.X == "F1" and OctoPort.config.controllerKeys.Y == "F2", "physical X/Y were not captured")
 assert(OctoPort.config.nativeFaceButtons == true, "captured ABXY were not switched to native action slots")
+
+-- The HUD owns exactly 20 editable action mirrors: four base face buttons,
+-- plus eight inputs for each trigger layer.
+local function CountKeys(values)
+  local count = 0
+  for _ in pairs(values) do count = count + 1 end
+  return count
+end
+
+OctoPort:CreateRoot()
+assert(CountKeys(OctoPort.layers.base.buttons) == 4, "base layer does not contain four actions")
+assert(CountKeys(OctoPort.layers.lt.buttons) == 8, "LT layer does not contain eight actions")
+assert(CountKeys(OctoPort.layers.rt.buttons) == 8, "RT layer does not contain eight actions")
+assert(OctoPort:GetActionSlot("lt", "A") == 61 and OctoPort:GetActionSlot("lt", "DUP") == 65, "LT action slots are wrong")
+assert(OctoPort:GetActionSlot("rt", "A") == 49 and OctoPort:GetActionSlot("rt", "DLEFT") == 56, "RT action slots are wrong")
+
+shiftDown = true
+assert(OctoPort:GetActiveLayer() == "lt", "SHIFT did not select the LT layer")
+shiftDown = false
+controlDown = true
+assert(OctoPort:GetActiveLayer() == "rt", "CTRL did not select the RT layer")
+controlDown = false
+
+OctoPort.config.editMode = true
+local editButton = OctoPort.layers.lt.buttons.A
+editButton.action = 61
+this = editButton
+arg1 = "RightButton"
+editButton.scripts.OnClick()
+assert(pickedAction == 61, "custom HUD action could not be picked up for editing")
 
 print("minimap/raw input harness: OK")

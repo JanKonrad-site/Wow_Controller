@@ -464,6 +464,7 @@ function OctoPort:ShowRadial(editor)
   self:RefreshRadial()
   self:SetRadialSelection(nil)
   self.radialFrame:Show()
+  if self.ActivateConfigNavigationBindings then self:ActivateConfigNavigationBindings() end
   PlaySound("igMainMenuOpen")
 end
 
@@ -471,6 +472,9 @@ function OctoPort:HideRadial()
   if self.radialFrame then self.radialFrame:Hide() end
   self.radialEditor = false
   self:SetRadialSelection(nil)
+  if self.config and self.config.enabled and not self.bindingCaptureActive and self.ActivateSessionBindings then
+    self:ActivateSessionBindings()
+  end
 end
 
 function OctoPort:ToggleRadialEditor()

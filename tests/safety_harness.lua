@@ -40,7 +40,7 @@ OctoPort = {
   config = {
     enabled = false,
     controllerKeys = {},
-    nativeModifiers = { SHIFT = "shift", CTRL = "ctrl" },
+    nativeModifiers = { SHIFT = "lt", CTRL = "rt" },
     rearActions = { M1 = "settings", M2 = "interact" },
   },
 }
@@ -56,8 +56,8 @@ assert(OctoPort.config.controllerKeys.LSUP == "W", "forward movement default mis
 assert(OctoPort.config.controllerKeys.LSDOWN == "S", "backward movement default missing")
 assert(OctoPort.config.controllerKeys.LSLEFT == "A", "left strafe default missing")
 assert(OctoPort.config.controllerKeys.LSRIGHT == "D", "right strafe default missing")
-assert(OctoPort.config.controllerKeys.RB == "BUTTON1", "native RB default missing")
-assert(OctoPort.config.controllerKeys.RT == "BUTTON2", "native RT default missing")
+assert(OctoPort.config.controllerKeys.LB == "BUTTON1", "native LB left-click default missing")
+assert(OctoPort.config.controllerKeys.RB == "BUTTON2", "native RB right-click default missing")
 assert(OctoPort.config.controllerKeys.L3 == "NUMLOCK", "L3 default missing")
 assert(OctoPort.config.controllerKeys.R3 == "SPACE", "R3 default missing")
 assert(saveCount == 0, "movement defaults persisted bindings")
@@ -68,6 +68,12 @@ bindings.W = "OPENCHAT"
 bindings.UP = "PREVIOUSACTIONPAGE"
 bindings.BUTTON1 = "CAMERAORSELECTORMOVE"
 bindings.BUTTON2 = "TURNORACTION"
+bindings["SHIFT-1"] = "CHATBOTTOM"
+bindings["SHIFT-UP"] = "PREVIOUSACTIONPAGE"
+bindings["CTRL-1"] = "TOGGLECHARACTER0"
+bindings["CTRL-UP"] = "NEXTACTIONPAGE"
+bindings["SHIFT-W"] = "OPENCHAT"
+bindings["CTRL-W"] = "OPENCHATSLASH"
 OctoPort:ApplyRecommendedBindings()
 assert(bindings["1"] == "OPENCHAT", "profile selection changed a live face-button binding")
 assert(bindings.BUTTON1 == "CAMERAORSELECTORMOVE", "profile selection stole native left click")
@@ -82,7 +88,26 @@ assert(bindings.W == "MOVEFORWARD", "native forward binding missing")
 assert(bindings.S == "MOVEBACKWARD", "native backward binding missing")
 assert(bindings.A == "STRAFELEFT", "native left strafe binding missing")
 assert(bindings.D == "STRAFERIGHT", "native right strafe binding missing")
-assert(bindings.UP == "OCTOPORT_TARGET_UP", "D-pad targeting was not active beside movement")
+assert(bindings.UP == "TARGETPREVIOUSFRIEND", "native D-pad targeting was not active beside movement")
+assert(bindings.DOWN == "TARGETNEARESTFRIEND", "D-pad down did not target the next friend")
+assert(bindings.LEFT == "TARGETPREVIOUSENEMY", "D-pad left did not target the previous enemy")
+assert(bindings.RIGHT == "TARGETNEARESTENEMY", "D-pad right did not target the next enemy")
+assert(bindings["SHIFT-1"] == "MULTIACTIONBAR1BUTTON1", "LT+A native action missing")
+assert(bindings["SHIFT-UP"] == "MULTIACTIONBAR1BUTTON5", "LT+D-pad native action missing")
+assert(bindings["CTRL-1"] == "MULTIACTIONBAR2BUTTON1", "RT+A native action missing")
+assert(bindings["CTRL-UP"] == "MULTIACTIONBAR2BUTTON5", "RT+D-pad native action missing")
+assert(bindings["SHIFT-W"] == "MOVEFORWARD", "LT interrupted stick movement")
+assert(bindings["CTRL-W"] == "MOVEFORWARD", "RT interrupted stick movement")
+local actionKeys = { "1", "2", "3", "4", "UP", "RIGHT", "DOWN", "LEFT" }
+for index = 1, 8 do
+  assert(bindings["SHIFT-" .. actionKeys[index]] == "MULTIACTIONBAR1BUTTON" .. index, "LT action " .. index .. " is missing")
+  assert(bindings["CTRL-" .. actionKeys[index]] == "MULTIACTIONBAR2BUTTON" .. index, "RT action " .. index .. " is missing")
+end
+local movementKeys = { W = "MOVEFORWARD", S = "MOVEBACKWARD", A = "STRAFELEFT", D = "STRAFERIGHT" }
+for key, command in pairs(movementKeys) do
+  assert(bindings["SHIFT-" .. key] == command, "LT modified movement missing for " .. key)
+  assert(bindings["CTRL-" .. key] == command, "RT modified movement missing for " .. key)
+end
 assert(bindings.NUMLOCK == "TOGGLEAUTORUN", "native L3 autorun binding missing")
 assert(bindings.SPACE == "JUMP", "native R3 jump binding missing")
 assert(bindings.BUTTON1 == "CAMERAORSELECTORMOVE", "session activation stole native left click")
@@ -92,6 +117,9 @@ OctoPort:DeactivateSessionBindings()
 assert(bindings["1"] == "OPENCHAT", "session cleanup did not restore original A binding")
 assert(bindings.W == "OPENCHAT", "session cleanup did not restore original movement binding")
 assert(bindings.UP == "PREVIOUSACTIONPAGE", "session cleanup did not restore original D-pad binding")
+assert(bindings["SHIFT-1"] == "CHATBOTTOM" and bindings["SHIFT-UP"] == "PREVIOUSACTIONPAGE", "LT layer bindings were not restored")
+assert(bindings["CTRL-1"] == "TOGGLECHARACTER0" and bindings["CTRL-UP"] == "NEXTACTIONPAGE", "RT layer bindings were not restored")
+assert(bindings["SHIFT-W"] == "OPENCHAT" and bindings["CTRL-W"] == "OPENCHATSLASH", "modified movement bindings were not restored")
 assert(bindings.S == nil and bindings.A == nil and bindings.D == nil, "session cleanup left native movement bindings behind")
 assert(bindings.NUMLOCK == nil and bindings.SPACE == nil, "session cleanup left stick-click bindings behind")
 assert(bindings.BUTTON1 == "CAMERAORSELECTORMOVE", "session cleanup changed native left click")
@@ -105,6 +133,14 @@ assert(OctoPort.config.controllerKeys.LSUP == nil, "duplicate signal still owns 
 assert(OctoPort.config.lastBindingCollision and OctoPort.config.lastBindingCollision.previous == "LSUP", "duplicate signal was not reported")
 OctoPort:ApplyRecommendedBindings()
 assert(OctoPort.config.lastBindingCollision == nil, "preset did not clear old collision warning")
+
+-- The controller cannot be enabled when a stick direction and D-pad signal
+-- collapse to the same input. No partial session bindings may remain active.
+OctoPort.config.controllerKeys.DUP = OctoPort.config.controllerKeys.LSUP
+OctoPort.config.enabled = true
+assert(not OctoPort:ActivateSessionBindings(), "conflicting direction profile was accepted")
+assert(OctoPort.sessionBindingsActive == false, "failed calibration left a partial session active")
+OctoPort:ApplyRecommendedBindings()
 
 -- A working raw key can enable a menu-only session without activating the
 -- rest of an incomplete controller profile.
@@ -121,7 +157,7 @@ assert(bindings.F4 == "TOGGLECHARACTER0", "quick menu key was not restored")
 -- Updating a shared-arrow profile restores the intended direct layout. Stick
 -- and D-pad bindings are active simultaneously and never share a key.
 OctoPort.config.enabled = false
-OctoPort.config.bindingVersion = 9
+OctoPort.config.bindingVersion = 10
 OctoPort.config.arrowMovementFallback = true
 OctoPort.config.reticleEnabled = true
 OctoPort.config.controllerKeys = {
@@ -132,14 +168,17 @@ assert(OctoPort:EnsureDirectControlDefaults(), "direct-control upgrade did not r
 assert(OctoPort.config.controllerKeys.LSUP == "W" and OctoPort.config.controllerKeys.LSLEFT == "A", "stick was not restored to W/A/S/D")
 assert(OctoPort.config.controllerKeys.DUP == "UP" and OctoPort.config.controllerKeys.DLEFT == "LEFT", "D-pad target keys were not restored")
 assert(OctoPort.config.controllerKeys.A == "1" and OctoPort.config.controllerKeys.Y == "4", "ABXY defaults were not upgraded to 1-4")
+assert(OctoPort.config.nativeModifiers.SHIFT == "lt" and OctoPort.config.nativeModifiers.CTRL == "rt", "LT/RT modifier migration failed")
+assert(OctoPort.config.controllerKeys.LB == "BUTTON1" and OctoPort.config.controllerKeys.RB == "BUTTON2", "mouse click migration failed")
 assert(OctoPort.config.arrowMovementFallback == false, "shared-arrow mode survived the upgrade")
 assert(OctoPort.config.reticleEnabled == false, "reticle survived the direct-control upgrade")
 OctoPort:RefreshSetupState()
 OctoPort.config.enabled = true
 assert(OctoPort:ActivateSessionBindings(), "direct-control profile did not activate")
 assert(bindings.W == "MOVEFORWARD", "stick movement was not active")
-assert(bindings.UP == "OCTOPORT_TARGET_UP", "D-pad targeting was not active simultaneously")
+assert(bindings.UP == "TARGETPREVIOUSFRIEND", "native D-pad targeting was not active simultaneously")
 assert(bindings["1"] == "ACTIONBUTTON1" and bindings["4"] == "ACTIONBUTTON4", "native ABXY actions were not active")
+assert(bindings["SHIFT-1"] == "MULTIACTIONBAR1BUTTON1" and bindings["CTRL-1"] == "MULTIACTIONBAR2BUTTON1", "20-action layers were not active")
 OctoPort:DeactivateSessionBindings()
 assert(bindings.W == "OPENCHAT" and bindings.UP == "PREVIOUSACTIONPAGE", "direct controls did not restore previous bindings")
 assert(bindings["1"] == "OPENCHAT" and bindings["4"] == nil, "direct ABXY did not restore previous bindings")
@@ -165,6 +204,18 @@ OctoPort:DeactivateSessionBindings()
 assert(bindings.ENTER == "OPENCHAT" and bindings.ESCAPE == "TOGGLEGAMEMENU", "captured A/B restore lost existing actions")
 assert(bindings.F1 == "TOGGLECHARACTER0" and bindings.F2 == "TOGGLESPELLBOOK", "captured X/Y restore lost existing actions")
 assert(saveCount == 0, "native face-button profile persisted bindings")
+
+-- Opening controller settings temporarily routes ABXY to menu navigation, and
+-- closing it restores native combat actions without persisting anything.
+OctoPort.config.enabled = true
+assert(OctoPort:ActivateSessionBindings(), "profile did not reactivate for menu navigation test")
+assert(OctoPort:ActivateConfigNavigationBindings(), "ABXY menu navigation did not activate")
+assert(bindings.ENTER == "OCTOPORT_ACTION_A" and bindings.ESCAPE == "OCTOPORT_ACTION_B", "settings did not receive captured A/B")
+assert(bindings.UP == "OCTOPORT_TARGET_UP", "settings did not receive D-pad navigation")
+assert(OctoPort:ActivateSessionBindings(), "combat bindings did not restore after menu close")
+assert(bindings.ENTER == "ACTIONBUTTON1" and bindings.ESCAPE == "ACTIONBUTTON2", "menu close did not restore native A/B")
+assert(bindings.UP == "TARGETPREVIOUSFRIEND", "menu close did not restore native D-pad targeting")
+OctoPort:DeactivateSessionBindings()
 
 -- Migration is intentionally the sole persistent write. It repairs commands
 -- saved by versions 0.1-0.4 and then leaves the addon disabled.

@@ -1,4 +1,4 @@
-WOW CONTROLLER 0.8.0 - ROG ALLY X / ARMOURY CRATE SE
+WOW CONTROLLER 0.9.0 - ROG ALLY X / ARMOURY CRATE SE
 ================================================
 
 RYCHLY START
@@ -9,7 +9,7 @@ RYCHLY START
 4. Klikni levym tlacitkem na tyrkysovou ikonku WC u minimapy. Neni treba psat /wc.
 5. V RAW TESTU musi leva packa ukazat W/S/A/D a D-pad ctyri jine signaly.
 6. Pravym klikem na WC otevri nastaveni a zvol profil nebo pruvodce.
-7. RB, RT, L3, R3, View, LB, LT, M1 a M2 jsou volitelne kroky.
+7. LT a RT jsou povinne: nastav LT=Shift a RT=Ctrl. LB/RB, L3/R3, View a M1/M2 jsou volitelne.
 8. Zvol ZAPNOUT BEZPECNE a v DIAGNOSTICE over vsechny vstupy.
 
 PRIME OVLADANI BEZ PREPINANI REZIMU
@@ -23,6 +23,8 @@ PRIME OVLADANI BEZ PREPINANI REZIMU
   vystup v Armoury Crate; addon stejny signal fyzicky rozdelit nemuze.
 - V Setupu zvol NACIST ABXY 1-4 a postupne stiskni fyzicke A, B, X, Y. I kdyz
   ted vysilaji Enter/Escape, za aktivni relace budou ovladat akce 1/2/3/4.
+- KALIBROVAT 8 SMERU nacte packu a D-pad oddelene. Pokud libovolne dva smery
+  vysilaji stejnou klavesu, addon se nezapne a zadne castecne bindy nezustanou.
 
 Klient WoW 1.12 neumi XInput, proto Gamepad Mode nefunguje. Leva packa vysila
 W/A/S/D a addon je po dobu aktivni relace navaze primo na nativni pohybove
@@ -36,8 +38,10 @@ DOPORUCENE MAPOVANI MIMO PRUVODCE
 ---------------------------------
 Leva packa        W / A / S / D       Nativni pohyb Blizzard UI
 Prava packa       Mouse                Kurzor / kamera / radialni vyber
-RB                Levy klik            Vyber v UI
-RT                Pravy klik           Kamera / interakce
+LT                Shift                Akcni vrstva LT (8 slotu)
+RT                Ctrl                 Akcni vrstva RT (8 slotu)
+LB                Levy klik            Vyber v UI (skutecny mouse BUTTON1)
+RB                Pravy klik           Kamera / interakce (skutecny BUTTON2)
 R3                Space                Skok
 L3                NumLock              Automaticky beh
 Menu              F8                   Radialni kolo / herni menu
@@ -54,16 +58,27 @@ Center a Armoury Crate jsou systemova a nelze je premapovat ani zachytit addonem
 Pokud leva packa v RAW TESTU ukazuje sipky, sdili signal s D-padem a addon je
 nemuze rozlisit. Oprav levou packu na W/A/S/D v hernim Desktop Mode profilu.
 
-BEZPECNY PRIMY PROFIL
+BEZPECNY UNIVERZALNI PROFIL
 ---------------------
 A/B/X/Y           1/2/3/4
 D-pad             Sipky
 Menu              F8
-LB/LT             Shift/Ctrl
+LT/RT             Shift/Ctrl
 View              F7
 M1/M2             F6/F5
 L3/R3             NumLock/Space
-RB/RT              Levy/Pravy klik (pouze pruchozi, addon je neprepisuje)
+LB/RB             Levy/Pravy klik (pouze pruchozi, addon je neprepisuje)
+
+AKCNI SLOTY
+-----------
+Bez triggeru       A/B/X/Y                         4 akce
+Drz LT             A/B/X/Y + D-pad 4 smery        8 akci
+Drz RT             A/B/X/Y + D-pad 4 smery        8 akci
+Celkem                                               20 akci
+
+V zalozce HRANI vyber UPRAVIT 20 AKCI. Do vlastniho HUDu pretahni schopnosti
+nebo predmety mysi; pravym klikem lze akci ze slotu zvednout. Bez triggeru
+D-pad vzdy prepina cile. Teprve pri drzeni LT/RT se D-pad prepne na akce.
 
 Pouzij tlacitko ROG ALLY PROFIL nebo prikaz /octoport preset. Profil vcetne
 ctyr smeru leve packy se aktivuje jen pro aktualni relaci a pri vypnuti nebo
@@ -79,12 +94,12 @@ OVLADANI VE HRE
 /octoport restore           Nouzove vycistit bindy a addon vypnout
 /octoport wheel             Editor radialniho kola
 
-V Controller menu meni D-pad vlevo/vpravo zalozku a nahoru/dolu vyber; RB/levy
-klik potvrzuje a View menu otevira/zavira. Ve hre D-pad nahoru/dolu prepina
+V Controller menu meni D-pad vlevo/vpravo zalozku a nahoru/dolu vyber; A nebo
+levy klik potvrzuje a B/View menu zavira. Ve hre D-pad nahoru/dolu prepina
 pratele a vlevo/vpravo nepritele.
 Podrzenim Menu se otevre radialni kolo; smer vyber pravou packou nebo D-padem.
 Leva packa ovlada nativni pohyb. Controller menu a radial se ovladaji D-padem.
-Stary stredovy zamerovac se ve verzi 0.8 uz nenacita. Akce M1/M2 zmenis v
+Stary stredovy zamerovac se nenacita. Akce M1/M2 zmenis v
 zalozce HRANI.
 
 BEZPECNOST HESLA
