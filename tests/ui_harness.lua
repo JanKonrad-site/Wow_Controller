@@ -43,16 +43,18 @@ function IsControlKeyDown() return false end
 function IsAltKeyDown() return false end
 
 OctoPort = {
-  version = "0.7.2",
+  version = "0.8.0",
   config = {
     enabled = false,
-    arrowMovementFallback = false,
-    arrowInputMode = "movement",
     controllerKeys = { LSUP = "W", RB = "BUTTON1" },
     nativeModifiers = { SHIFT = "shift", CTRL = "ctrl" },
   },
   bindingDefinitions = {
     { id = "LSUP", label = "L-Stick Up", command = "MOVEFORWARD", movement = "forward" },
+    { id = "A", label = "A / Action 1", command = "OCTOPORT_ACTION_A", required = true, nativeAction = true },
+    { id = "B", label = "B / Action 2", command = "OCTOPORT_ACTION_B", required = true, nativeAction = true },
+    { id = "X", label = "X / Action 3", command = "OCTOPORT_ACTION_X", required = true, nativeAction = true },
+    { id = "Y", label = "Y / Action 4", command = "OCTOPORT_ACTION_Y", required = true, nativeAction = true },
     { id = "LB", label = "LB layer", command = "OCTOPORT_LAYER_LB", layer = "shift" },
     { id = "RB", label = "RB / Left Click", passthrough = true },
   },
@@ -63,19 +65,21 @@ function OctoPort:SignalInput(id, state)
   self.lastControllerInputState = state
 end
 
+function OctoPort:Print() end
+
 function OctoPort:SetQuickMenuKey(key)
   self.testMenuKey = key
   return true
 end
 
-function OctoPort:SetQuickModeKey(key)
-  self.testModeKey = key
-  return true
+function OctoPort:GetBindingDefinition(id)
+  for index = 1, table.getn(self.bindingDefinitions) do
+    if self.bindingDefinitions[index].id == id then return self.bindingDefinitions[index] end
+  end
 end
 
-function OctoPort:ToggleArrowInputMode()
-  self.config.arrowInputMode = self.config.arrowInputMode == "target" and "movement" or "target"
-  self:UpdateArrowModeButton()
+function OctoPort:BindControllerKey(definition, key)
+  self.config.controllerKeys[definition.id] = key
   return true
 end
 
@@ -85,14 +89,7 @@ dofile("UI.lua")
 OctoPort:CreateMinimapButton()
 assert(OctoPort.minimapButton and OctoPort.minimapButton.visible, "minimap button was not created")
 assert(OctoPort.minimapButton.scripts.OnClick, "minimap button is not clickable")
-assert(OctoPort.arrowModeButton and not OctoPort.arrowModeButton.visible, "shared-arrow mode button should start hidden")
-
-OctoPort.config.enabled = true
-OctoPort.config.arrowMovementFallback = true
-OctoPort:UpdateArrowModeButton()
-assert(OctoPort.arrowModeButton.visible and OctoPort.arrowModeButton.label.text == "CHOD", "movement mode indicator was not shown")
-OctoPort.arrowModeButton.scripts.OnClick()
-assert(OctoPort.config.arrowInputMode == "target" and OctoPort.arrowModeButton.label.text == "CIL", "mode button did not switch to targeting")
+assert(not OctoPort.arrowModeButton, "obsolete shared-arrow mode button was created")
 
 arg1 = "LeftButton"
 OctoPort.minimapButton.scripts.OnClick()
@@ -115,14 +112,26 @@ OctoPort.rawTestFrame.menuButton.scripts.OnClick()
 assert(OctoPort.testMenuKey == "ESCAPE", "last working input could not be assigned to menu")
 
 OctoPort.rawTestFrame:Show()
-arg1 = "F3"
-OctoPort.rawTestFrame.scripts.OnKeyDown()
-OctoPort.rawTestFrame.modeButton.scripts.OnClick()
-assert(OctoPort.testModeKey == "F3", "last working input could not be assigned to the movement/target switch")
-
-OctoPort.rawTestFrame:Show()
 arg1 = "LeftButton"
 OctoPort.rawTestFrame.scripts.OnMouseDown()
 assert(string.find(OctoPort.rawTestFrame.last.text, "RB / Left Click", 1, true), "raw mouse signal was not identified")
+
+-- The focused ABXY wizard captures the physical signals actually emitted by
+-- Desktop Mode, including Enter/Escape, while selecting native action slots.
+OctoPort.configFrame = NewRegion()
+OctoPort.captureFrame = NewRegion()
+OctoPort.captureFrame.instruction = NewRegion()
+OctoPort.captureFrame.progress = NewRegion()
+OctoPort.captureFrame.skip = NewRegion()
+OctoPort.ShowConfigTab = function() end
+OctoPort:StartFaceBindingWizard()
+OctoPort:CaptureControllerKey("ENTER")
+OctoPort:CaptureControllerKey("ESCAPE")
+OctoPort:CaptureControllerKey("F1")
+OctoPort:CaptureControllerKey("F2")
+assert(OctoPort.config.controllerKeys.A == "ENTER", "physical A was not captured")
+assert(OctoPort.config.controllerKeys.B == "ESCAPE", "physical B was not captured")
+assert(OctoPort.config.controllerKeys.X == "F1" and OctoPort.config.controllerKeys.Y == "F2", "physical X/Y were not captured")
+assert(OctoPort.config.nativeFaceButtons == true, "captured ABXY were not switched to native action slots")
 
 print("minimap/raw input harness: OK")

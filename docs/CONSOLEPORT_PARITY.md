@@ -8,14 +8,14 @@ the current OctoLauncher entry expects one addon TOC in the repository root.
 
 ## Compatibility decision
 
-| ConsolePort area | 1.12 implementation | Status after 0.7.2 |
+| ConsolePort area | 1.12 implementation | Status after 0.8.0 |
 |---|---|---|
 | Controller setup | Capture keyboard/mouse signals produced by Armoury Crate | Safe session-only setup |
 | Character movement | Four left-stick key signals bound directly to Blizzard movement commands | Implemented; protected-Lua-free, session-only and reversible |
 | Action bars | Addon-owned visual mirrors of Blizzard action slots | Safe base implemented |
 | Modifier layers | Shift/Ctrl or mapped LB/LT layers | Implemented |
-| Targeting | Friendly/enemy cycling through 1.12 targeting API; explicit CHOD/CIL switch for duplicated arrow signals | Implemented; hardware test required |
-| Reticle | Addon-owned center overlay with target state | Implemented, opt-in |
+| Targeting | Friendly/enemy cycling on D-pad signals distinct from W/A/S/D movement | Implemented; duplicate device signals are rejected |
+| Reticle | Not loaded; target cycling does not require an FPS reticle | Removed from active UI |
 | Utility rings | Eight-slot radial menu | Implemented, opt-in |
 | Menu navigation | Focus graph for known Blizzard panels | Partial; expand panel by panel |
 | UI cursor | Armoury Crate right-stick mouse mapping | External mapping; 1.12 has no native gamepad cursor API |
@@ -24,7 +24,7 @@ the current OctoLauncher entry expects one addon TOC in the repository root.
 | Unit-frame control | Explicit party/raid focus graph | Planned; no global unit-frame hooks |
 | Loot control | Controller focus and loot actions | Planned; current cursor placement remains opt-in |
 | Quest control | Confirm/back and optional displayed-quest acceptance | Partial, opt-in |
-| Device calibration | Persistent minimap entry, raw tester, duplicate-signal warnings and assignable CHOD/CIL toggle | Implemented for keyboard/mouse emulation |
+| Device calibration | Persistent minimap entry, raw tester, duplicate-signal warnings and focused ABXY capture | Implemented for keyboard/mouse emulation |
 
 ## Non-negotiable safety rules
 

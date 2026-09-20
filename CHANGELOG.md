@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.0
+
+- Removed the CHOD/CIL mode switch; the left stick and D-pad now stay active simultaneously through distinct device signals.
+- Migrated the intended ROG Ally layout to left-stick W/A/S/D and D-pad arrow keys, with duplicate-signal detection retained as a hard setup error.
+- Added a focused **NACIST ABXY 1-4** wizard that captures the physical A/B/X/Y outputs—including Enter and Escape—and maps them to native Blizzard action slots 1-4.
+- Changed the fixed ROG Ally profile from F9-F12 face actions to native keys/actions 1-4.
+- Stopped loading the center reticle and removed its controls and M1/M2 action from the active UI.
+- Preserved session-only bindings and exact restoration of every overwritten key.
+
 ## 0.7.2
 
 - Replaced the one-way arrow emergency profile with a reversible **CHOD/CIL** mode for hardware profiles where the left stick and D-pad emit identical arrow keys.

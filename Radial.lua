@@ -479,7 +479,7 @@ function OctoPort:ToggleRadialEditor()
     self:Print("Radial menu editor closed.")
   else
     self:ShowRadial(true)
-    self:Print("Radial editor: D-pad selects, A/X changes, B closes. Mouse clicks also work.")
+    self:Print("Radial editor: D-pad selects, mouse clicks change a slot and Menu closes.")
   end
 end
 

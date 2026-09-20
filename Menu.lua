@@ -199,7 +199,8 @@ function OctoPort:UpdateCapturePrompt()
     self.captureFrame.progress:SetText("Stavajici vazba se nahradi. Funguje i Enter, Escape a tlacitka mysi.")
   else
     local optional = self.captureDefinition.required and "" or "  |  VOLITELNE"
-    self.captureFrame.progress:SetText("Krok " .. self.captureIndex .. " / " .. table.getn(self.bindingDefinitions) .. optional)
+    local count = self.captureSequence and table.getn(self.captureSequence) or table.getn(self.bindingDefinitions)
+    self.captureFrame.progress:SetText("Krok " .. self.captureIndex .. " / " .. count .. optional)
   end
   if self.captureDefinition.required then self.captureFrame.skip:Hide() else self.captureFrame.skip:Show() end
 end
@@ -208,8 +209,24 @@ function OctoPort:StartBindingWizard()
   self:CreateConfigMenu()
   self:CreateCaptureOverlay()
   self.captureSingle = false
+  self.captureSequence = nil
+  self.captureFaceActions = nil
   self.captureIndex = 1
   self.captureDefinition = self.bindingDefinitions[1]
+  self.bindingCaptureActive = true
+  self.configFrame:Hide()
+  self:UpdateCapturePrompt()
+  self.captureFrame:Show()
+end
+
+function OctoPort:StartFaceBindingWizard()
+  self:CreateConfigMenu()
+  self:CreateCaptureOverlay()
+  self.captureSingle = false
+  self.captureSequence = { "A", "B", "X", "Y" }
+  self.captureFaceActions = true
+  self.captureIndex = 1
+  self.captureDefinition = self:GetBindingDefinition(self.captureSequence[1])
   self.bindingCaptureActive = true
   self.configFrame:Hide()
   self:UpdateCapturePrompt()
@@ -219,6 +236,8 @@ end
 function OctoPort:StartSingleBinding(definition)
   self:CreateCaptureOverlay()
   self.captureSingle = true
+  self.captureSequence = nil
+  self.captureFaceActions = nil
   self.captureIndex = nil
   self.captureDefinition = definition
   self.bindingCaptureActive = true
@@ -229,19 +248,26 @@ end
 function OctoPort:StopBindingCapture(completed)
   if completed then
     self.config.arrowMovementFallback = false
-    self.config.arrowInputMode = "movement"
     self.config.menuOnlyMode = false
+    self.config.nativeFaceButtons = true
+    self.config.reticleEnabled = false
     if self.config.enabled and self.ActivateSessionBindings then self:ActivateSessionBindings() end
-    if self.UpdateArrowModeButton then self:UpdateArrowModeButton() end
   end
+  local capturedFaces = completed and self.captureFaceActions
   self.bindingCaptureActive = false
   self.captureDefinition = nil
   self.captureIndex = nil
   self.captureSingle = nil
+  self.captureSequence = nil
+  self.captureFaceActions = nil
   if self.captureFrame then self.captureFrame:Hide() end
   self:ShowConfigTab(completed and 4 or 2, true)
   if completed then
-    self:Print("Controller wizard complete. Press every control once in Diagnostics.")
+    if capturedFaces then
+      self:Print("ABXY captured: physical A/B/X/Y now activate native action slots 1/2/3/4.")
+    else
+      self:Print("Controller wizard complete. Press every control once in Diagnostics.")
+    end
   end
 end
 
@@ -252,11 +278,16 @@ function OctoPort:AdvanceCaptureStep()
   end
 
   self.captureIndex = self.captureIndex + 1
-  if self.captureIndex > table.getn(self.bindingDefinitions) then
+  local count = self.captureSequence and table.getn(self.captureSequence) or table.getn(self.bindingDefinitions)
+  if self.captureIndex > count then
     self:StopBindingCapture(true)
     return
   end
-  self.captureDefinition = self.bindingDefinitions[self.captureIndex]
+  if self.captureSequence then
+    self.captureDefinition = self:GetBindingDefinition(self.captureSequence[self.captureIndex])
+  else
+    self.captureDefinition = self.bindingDefinitions[self.captureIndex]
+  end
   self:UpdateCapturePrompt()
 end
 
@@ -321,9 +352,6 @@ function OctoPort:RefreshBindingMenu()
       local previous = self:GetBindingDefinition(collision.previous)
       local current = self:GetBindingDefinition(collision.current)
       self.setupStatus:SetText("|cffff6655KOLIZE " .. collision.key .. ": " .. (previous and previous.label or collision.previous) .. " / " .. (current and current.label or collision.current) .. "|r")
-    elseif self.config.arrowMovementFallback then
-      local mode = self.config.arrowInputMode == "target" and "CIL" or "CHOD"
-      self.setupStatus:SetText("|cffffb83dSDILENE SIPKY: REZIM " .. mode .. " (PREPINAC U MINIMAPY)|r")
     elseif self.config.menuOnlyMode then
       self.setupStatus:SetText("|cffffb83dAKTIVNI JE JEN TLACITKO PRO MENU|r")
     else
@@ -422,7 +450,7 @@ function OctoPort:CreateRawInputTest()
   history:SetPoint("TOPLEFT", historyTitle, "BOTTOMLEFT", 0, -8)
   history:SetJustifyH("LEFT")
 
-  local useForMenu = MakeButton(frame, "VSTUP = MENU", 150, function()
+  local useForMenu = MakeButton(frame, "VSTUP = MENU", 190, function()
     if not OctoPort.lastRawInputKey then
       OctoPort.rawTestFrame.warning:SetText("Nejprve stiskni jedno funkcni fyzicke tlacitko.")
       return
@@ -431,21 +459,10 @@ function OctoPort:CreateRawInputTest()
       OctoPort.rawTestFrame:Hide()
     end
   end)
-  useForMenu:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 36, 28)
+  useForMenu:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 92, 28)
 
-  local useForMode = MakeButton(frame, "VSTUP = CHOD/CIL", 180, function()
-    if not OctoPort.lastRawInputKey then
-      OctoPort.rawTestFrame.warning:SetText("Nejprve stiskni jedno funkcni fyzicke tlacitko.")
-      return
-    end
-    if OctoPort:SetQuickModeKey(OctoPort.lastRawInputKey) then
-      OctoPort.rawTestFrame:Hide()
-    end
-  end)
-  useForMode:SetPoint("LEFT", useForMenu, "RIGHT", 14, 0)
-
-  local close = MakeButton(frame, "ZAVRIT", 130, function() OctoPort.rawTestFrame:Hide() end)
-  close:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -36, 28)
+  local close = MakeButton(frame, "ZAVRIT TEST", 150, function() OctoPort.rawTestFrame:Hide() end)
+  close:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -92, 28)
 
   frame:SetScript("OnKeyDown", function()
     OctoPort:RecordRawInput(arg1)
@@ -469,7 +486,6 @@ function OctoPort:CreateRawInputTest()
   frame.warning = warning
   frame.history = history
   frame.menuButton = useForMenu
-  frame.modeButton = useForMode
   self.rawTestFrame = frame
 end
 
@@ -593,26 +609,19 @@ local function BuildSetupPanel(panel)
   end))
   restore:SetPoint("LEFT", preset, "RIGHT", 10, 0)
 
-  local nativeFace = AddFocusable(panel, MakeButton(panel, "ABXY = 1 2 3 4", 160, function()
-    OctoPort:ApplyNativeFaceButtons()
-    OctoPort:RefreshBindingMenu()
+  local nativeFace = AddFocusable(panel, MakeButton(panel, "NACIST ABXY 1-4", 160, function()
+    OctoPort:StartFaceBindingWizard()
   end))
   nativeFace:SetPoint("LEFT", restore, "RIGHT", 10, 0)
 
-  local enable = AddFocusable(panel, MakeButton(panel, "ZAPNOUT BEZPECNE", 310, function()
+  local enable = AddFocusable(panel, MakeButton(panel, "ZAPNOUT BEZPECNE", 480, function()
     OctoPort:SetEnabled(not OctoPort.config.enabled)
     this:SetText(OctoPort.config.enabled and "VYPNOUT A OBNOVIT BINDY" or "ZAPNOUT BEZPECNE")
   end))
   enable:SetPoint("TOPLEFT", preset, "BOTTOMLEFT", 0, -12)
 
-  local arrowFallback = AddFocusable(panel, MakeButton(panel, "CHUZE ZE SIPEK", 160, function()
-    OctoPort:ApplyArrowMovementFallback()
-    OctoPort:RefreshBindingMenu()
-  end))
-  arrowFallback:SetPoint("LEFT", enable, "RIGHT", 10, 0)
-
   local note = MakeLabel(panel, "GameFontDisableSmall",
-    "V Armoury Crate nastav CONTROL MODE = DESKTOP. Pokud packa i D-pad vysilaji stejne sipky, CHUZE ZE SIPEK aktivuje prepinac CHOD/CIL u minimapy. ABXY = 1 2 3 4 pouzije nativni Blizzard akce; Armoury Crate ale musi z tlacitek opravdu vysilat klavesy 1-4. M1/M2 musi byt samostatna tlacitka, ne Secondary Function.", 470)
+    "V Armoury Crate nastav CONTROL MODE = DESKTOP: leva packa W/A/S/D, D-pad sipky. Musi to byt osm ruznych signalu, jinak soubezny pohyb a targeting nejsou mozne. NACIST ABXY zachyti i Enter/Escape z fyzickych tlacitek a pripoji je primo k akcim 1-4. M1/M2 musi byt samostatna tlacitka, ne Secondary Function.", 470)
   note:SetPoint("TOPLEFT", enable, "BOTTOMLEFT", 0, -18)
   note:SetJustifyH("LEFT")
 
@@ -662,7 +671,7 @@ local function BuildControlsPanel(panel)
   end))
   wizard:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 0)
 
-  local help = MakeLabel(panel, "GameFontDisableSmall", "D-pad ovlada menu. A potvrdi, B zavre.", 300)
+  local help = MakeLabel(panel, "GameFontDisableSmall", "D-pad vybira. RB / levy klik potvrzuje, View menu zavre.", 300)
   help:SetPoint("LEFT", wizard, "RIGHT", 12, 0)
 end
 
@@ -689,19 +698,12 @@ local function BuildGameplayPanel(panel)
   end))
   hud:SetPoint("TOPLEFT", autoQuest, "BOTTOMLEFT", 0, -10)
 
-  local reticle = AddFocusable(panel, MakeButton(panel, "", 200, function()
-    OctoPort.config.reticleEnabled = not OctoPort.config.reticleEnabled
-    SetToggleText(this, "ZAMEROVAC", OctoPort.config.reticleEnabled)
-    if OctoPort.UpdateReticle then OctoPort:UpdateReticle(true) end
-  end))
-  reticle:SetPoint("TOPLEFT", hud, "BOTTOMLEFT", 0, -10)
-
   local editBars = AddFocusable(panel, MakeButton(panel, "UPRAVIT LISTY AKCI", 200, function()
     OctoPort.config.editMode = not OctoPort.config.editMode
     OctoPort:UpdateLayer(true)
     OctoPort.configFrame:Hide()
   end))
-  editBars:SetPoint("TOPLEFT", reticle, "BOTTOMLEFT", 0, -10)
+  editBars:SetPoint("TOPLEFT", hud, "BOTTOMLEFT", 0, -10)
 
   local moveHud = AddFocusable(panel, MakeButton(panel, "POSUNOUT HUD", 200, function()
     OctoPort:SetMoveMode(not OctoPort.config.moveMode)
@@ -740,22 +742,10 @@ local function BuildGameplayPanel(panel)
   end))
   scaleUp:SetPoint("LEFT", scaleDown, "RIGHT", 12, 0)
 
-  local reticleDown = AddFocusable(panel, MakeButton(panel, "ZAMER -", 104, function()
-    OctoPort.config.reticleScale = math.max(0.6, (OctoPort.config.reticleScale or 1) - 0.1)
-    if OctoPort.UpdateReticle then OctoPort:UpdateReticle(true) end
-  end))
-  reticleDown:SetPoint("TOPLEFT", scaleDown, "BOTTOMLEFT", 0, -10)
-
-  local reticleUp = AddFocusable(panel, MakeButton(panel, "ZAMER +", 104, function()
-    OctoPort.config.reticleScale = math.min(1.8, (OctoPort.config.reticleScale or 1) + 0.1)
-    if OctoPort.UpdateReticle then OctoPort:UpdateReticle(true) end
-  end))
-  reticleUp:SetPoint("LEFT", reticleDown, "RIGHT", 12, 0)
-
   local rearM1 = AddFocusable(panel, MakeButton(panel, "", 220, function()
     OctoPort:CycleRearAction("M1")
   end))
-  rearM1:SetPoint("TOPLEFT", reticleDown, "BOTTOMLEFT", 0, -10)
+  rearM1:SetPoint("TOPLEFT", scaleDown, "BOTTOMLEFT", 0, -10)
 
   local rearM2 = AddFocusable(panel, MakeButton(panel, "", 220, function()
     OctoPort:CycleRearAction("M2")
@@ -768,7 +758,6 @@ local function BuildGameplayPanel(panel)
     SetToggleText(autoTarget, "AUTO TARGET", OctoPort.config.autoTarget)
     SetToggleText(autoQuest, "AUTO QUEST", OctoPort.config.autoAcceptQuests)
     SetToggleText(hud, "CONTROLLER HUD", OctoPort.config.enabled)
-    SetToggleText(reticle, "ZAMEROVAC", OctoPort.config.reticleEnabled)
     hold:SetText("PODRZENI MENU: " .. (OctoPort.config.radialHold or 0.35) .. " s")
     OctoPort:RefreshRearActionButtons()
   end)
@@ -895,7 +884,7 @@ function OctoPort:CreateConfigMenu()
   BuildGameplayPanel(self.configPanels[3])
   BuildDiagnosticsPanel(self.configPanels[4])
 
-  local hint = MakeLabel(frame, "GameFontDisableSmall", "D-pad navigace  |  A potvrdit  |  B zavrit  |  WC u minimapy = test")
+  local hint = MakeLabel(frame, "GameFontDisableSmall", "D-pad navigace  |  RB / levy klik potvrdit  |  View zavrit  |  WC = test")
   hint:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 28, 28)
 
   frame:SetScript("OnUpdate", function()

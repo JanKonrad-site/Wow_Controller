@@ -1,14 +1,14 @@
--- WOW Controller 0.7.2
+-- WOW Controller 0.8.0
 -- Controller-first interface for OctoWoW / World of Warcraft 1.12.x.
 
 OctoPort = OctoPort or {}
-OctoPort.version = "0.7.2"
+OctoPort.version = "0.8.0"
 
 BINDING_HEADER_OCTOPORT = "WOW Controller"
 BINDING_NAME_OCTOPORT_TOGGLEBAGS = "Open / close all bags"
 BINDING_NAME_OCTOPORT_TOGGLEHELP = "Open OctoPort help"
-BINDING_NAME_OCTOPORT_ACTION_A = "Controller A / confirm"
-BINDING_NAME_OCTOPORT_ACTION_B = "Controller B / back"
+BINDING_NAME_OCTOPORT_ACTION_A = "Controller A / action 1 (legacy)"
+BINDING_NAME_OCTOPORT_ACTION_B = "Controller B / action 2 (legacy)"
 BINDING_NAME_OCTOPORT_ACTION_X = "Controller X"
 BINDING_NAME_OCTOPORT_ACTION_Y = "Controller Y"
 BINDING_NAME_OCTOPORT_RADIAL = "Hold controller Menu / radial menu"
@@ -19,7 +19,6 @@ BINDING_NAME_OCTOPORT_TARGET_RIGHT = "Next enemy target"
 BINDING_NAME_OCTOPORT_LAYER_LB = "Controller LB action layer"
 BINDING_NAME_OCTOPORT_LAYER_LT = "Controller LT action layer"
 BINDING_NAME_OCTOPORT_OPENCONFIG = "Open WOW Controller settings"
-BINDING_NAME_OCTOPORT_TOGGLEMODE = "Switch shared arrows between move and target"
 BINDING_NAME_OCTOPORT_REAR_M1 = "ROG Ally rear paddle M1"
 BINDING_NAME_OCTOPORT_REAR_M2 = "ROG Ally rear paddle M2"
 
@@ -50,9 +49,8 @@ local defaults = {
   controllerKeys = {},
   movementBindingVersion = 0,
   arrowMovementFallback = false,
-  arrowInputMode = "movement",
   menuOnlyMode = false,
-  nativeFaceButtons = false,
+  nativeFaceButtons = true,
   autoTarget = false,
   autoAcceptQuests = false,
   radialHold = 0.35,
@@ -95,6 +93,7 @@ function OctoPort:InitializeConfig()
   CopyDefaults(OctoPortConfig, defaults)
   self.config = OctoPortConfig
   if self.EnsureMovementDefaults then self:EnsureMovementDefaults() end
+  if self.EnsureDirectControlDefaults then self.controlsProfileUpgraded = self:EnsureDirectControlDefaults() end
   if self.RefreshSetupState then self:RefreshSetupState() end
   self.needsSafetyMigration = hadExistingConfig and previousSafetyVersion < defaults.safetyVersion
   if self.needsSafetyMigration then
@@ -111,8 +110,6 @@ function OctoPort:ShowCommands()
   self:Print("/octoport - open controller settings")
   self:Print("/octoport setup - start the controller binding wizard")
   self:Print("/octoport test - open the raw keyboard/mouse input test")
-  self:Print("/octoport arrows - emergency movement when the stick emits arrow keys")
-  self:Print("/octoport mode - switch shared arrows between walking and targeting")
   self:Print("/octoport preset - apply safe session-only ROG Ally keys")
   self:Print("/octoport restore - disable addon and restore original bindings")
   self:Print("/octoport edit - show all three action layers")
@@ -122,7 +119,6 @@ function OctoPort:ShowCommands()
   self:Print("/octoport wheel - edit the radial menu")
   self:Print("/octoport target on | off - automatic enemy target for empty target")
   self:Print("/octoport quest on | off - automatic quest acceptance")
-  self:Print("/octoport reticle on | off - center target reticle")
   self:Print("/octoport mount NAME - preferred mount item or spell")
   self:Print("/octoport on | off - enable or hide the HUD")
 end
@@ -173,10 +169,6 @@ function OctoPort:HandleSlash(message)
     if self.StartBindingWizard then self:StartBindingWizard() end
   elseif message == "test" then
     if self.StartRawInputTest then self:StartRawInputTest() end
-  elseif message == "arrows" then
-    if self.ApplyArrowMovementFallback then self:ApplyArrowMovementFallback() end
-  elseif message == "mode" then
-    if self.ToggleArrowInputMode then self:ToggleArrowInputMode() end
   elseif message == "preset" then
     self:ApplyRecommendedBindings()
   elseif message == "restore" then
@@ -217,14 +209,6 @@ function OctoPort:HandleSlash(message)
   elseif message == "quest off" then
     self.config.autoAcceptQuests = false
     self:Print("Automatic quest acceptance disabled.")
-  elseif message == "reticle on" then
-    self.config.reticleEnabled = true
-    if self.UpdateReticle then self:UpdateReticle(true) end
-    self:Print("Target reticle enabled.")
-  elseif message == "reticle off" then
-    self.config.reticleEnabled = false
-    if self.UpdateReticle then self:UpdateReticle(true) end
-    self:Print("Target reticle disabled.")
   elseif string.sub(message, 1, 5) == "mount" then
     local name = Trim(string.sub(originalMessage, 6))
     self.config.mountName = name
@@ -273,7 +257,11 @@ events:SetScript("OnEvent", function()
       OctoPort.config.firstRunSeen = true
       OctoPort:Print("Unsafe bindings from an older version were removed. The addon is OFF until you enable it again.")
       OctoPort:ShowConfigTab(1, true)
-    elseif (OctoPort.config.bindingVersion or 0) < 9 and OctoPort.ShowConfigTab then
+    elseif OctoPort.controlsProfileUpgraded and OctoPort.ShowConfigTab then
+      OctoPort.config.firstRunSeen = true
+      OctoPort:Print("Direct controls enabled: stick W/A/S/D, D-pad targeting, ABXY action slots 1-4. Verify physical signals in RAW TEST.")
+      OctoPort:ShowConfigTab(1, true)
+    elseif (OctoPort.config.bindingVersion or 0) < 10 and OctoPort.ShowConfigTab then
       OctoPort.config.firstRunSeen = true
       OctoPort:ShowConfigTab(1, true)
     elseif not OctoPort.config.firstRunSeen and OctoPort.ToggleConfig then
