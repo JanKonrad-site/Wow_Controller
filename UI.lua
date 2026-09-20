@@ -412,8 +412,56 @@ function OctoPort:SetUIEnabled(enabled)
   end
 end
 
+function OctoPort:CreateMinimapButton()
+  if self.minimapButton then return end
+
+  local anchor = Minimap or UIParent
+  local button = CreateFrame("Button", "OctoPortMinimapButton", anchor)
+  button:SetWidth(32)
+  button:SetHeight(32)
+  button:SetPoint("TOPLEFT", anchor, "TOPLEFT", -3, -3)
+  button:SetFrameStrata("MEDIUM")
+  button:SetFrameLevel((anchor.GetFrameLevel and anchor:GetFrameLevel() or 0) + 8)
+  button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+  button:SetBackdrop({
+    bgFile = "Interface\\Tooltips\\UI-Tooltip-Background",
+    edgeFile = "Interface\\Buttons\\UI-Quickslot2",
+    tile = true,
+    tileSize = 8,
+    edgeSize = 12,
+    insets = { left = 3, right = 3, top = 3, bottom = 3 },
+  })
+  button:SetBackdropColor(0.025, 0.04, 0.055, 0.96)
+  button:SetBackdropBorderColor(0.24, 0.84, 0.81, 1)
+
+  local label = MakeText(button, "GameFontNormalSmall", "WC")
+  label:SetPoint("CENTER", button, "CENTER", 0, 1)
+  label:SetTextColor(0.24, 0.84, 0.81)
+
+  button:SetScript("OnEnter", function()
+    GameTooltip:SetOwner(this, "ANCHOR_LEFT")
+    GameTooltip:SetText("WOW Controller")
+    GameTooltip:AddLine("Levy klik: test ovladace", 1, 1, 1)
+    GameTooltip:AddLine("Pravy klik: nastaveni", 0.75, 0.80, 0.85)
+    GameTooltip:Show()
+  end)
+  button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  button:SetScript("OnClick", function()
+    if arg1 == "RightButton" then
+      if OctoPort.ShowConfigTab then OctoPort:ShowConfigTab(1, true) end
+    elseif OctoPort.StartRawInputTest then
+      OctoPort:StartRawInputTest()
+    elseif OctoPort.ShowConfigTab then
+      OctoPort:ShowConfigTab(4, true)
+    end
+  end)
+
+  self.minimapButton = button
+end
+
 function OctoPort:InitializeUI()
   self:CreateRoot()
+  self:CreateMinimapButton()
   if self.CreateReticle then self:CreateReticle() end
   self:ApplyLayout()
   self:SetUIEnabled(self.config.enabled)

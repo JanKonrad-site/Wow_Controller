@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0
+
+- Added an always-visible `WC` minimap button: left-click opens raw controller testing and right-click opens Setup, even while the addon is disabled.
+- Added a raw keyboard/mouse test overlay that identifies the exact signal emitted by every ROG Ally control before any session binding is enabled.
+- Added explicit stick-vs-D-pad collision detection so duplicate arrow signals can no longer silently replace native movement with targeting.
+- Added RB, RT, L3 and R3 to setup, manual mapping and Diagnostics; RB/RT remain native mouse pass-through controls, while L3/R3 use Blizzard's native auto-run/jump commands.
+- Expanded Diagnostics to cover Menu, View, M1/M2, right-stick mouse movement and the system-reserved Command Center/Armoury Crate buttons.
+- Enlarged the controller configuration window for the ROG Ally's 720p display while fitting the complete input list.
+
 ## 0.6.1
 
 - Fixed the OctoWoW "action only available to the Blizzard UI" error when moving.

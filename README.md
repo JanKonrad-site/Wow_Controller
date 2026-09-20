@@ -1,6 +1,6 @@
 # WOW Controller
 
-Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. Version 0.6.1 restores ConsoleExperience-style left-stick movement without calling protected movement functions: installation is inert, old persisted `OCTOPORT_*` bindings are repaired once, and controller bindings exist only for the current WoW session.
+Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. Version 0.7.0 adds an always-available minimap test button, raw keyboard/mouse input testing, collision detection and complete ROG Ally control coverage while preserving protected-Lua-free movement and session-only bindings.
 
 OctoWoW's 1.12 client has no native XInput support. Armoury Crate SE or Steam Input must convert the physical controller to keyboard/mouse signals. The addon binds the four left-stick signals directly to Blizzard's native movement commands; it never calls the protected movement functions from Lua. The right stick remains a mouse. This is the same device-side principle used by ConsoleExperienceClassic, while WOW Controller keeps every binding temporary and reversible.
 
@@ -22,14 +22,16 @@ There is no combat rotation, botting, injected DLL or unattended combat. Every c
 3. Install or update it, then launch OctoWoW.
 4. In ROG Command Center select **Desktop Mode** for OctoWoW. Do not leave it on Auto/Gamepad Mode.
 5. On the first 0.5 launch, the addon repairs older saved bindings and remains OFF.
-6. Type `/wc`, choose **ROG ALLY PROFIL** or run **SPUSTIT PRUVODCE**, then press **ZAPNOUT BEZPECNE**.
-7. Verify the controls in **DIAGNOSTIKA**.
+6. Left-click the cyan **WC** button beside the minimap and test the physical controls. Right-click it to open Setup; typing `/wc` is no longer necessary.
+7. Choose **ROG ALLY PROFIL** or run **SPUSTIT PRUVODCE**, then press **ZAPNOUT BEZPECNE**.
 
 The repository name must remain `Wow_Controller`: OctoLauncher clones it directly to `Interface/AddOns/Wow_Controller` and expects `Wow_Controller.toc` in the repository root.
 
 ## First controller setup
 
-The wizard first captures all four left-stick directions, then A, B, X, Y, all four D-pad directions and Menu. View, LB, LT, rear M1 and rear M2 are optional steps. Enter, Escape, arrow keys, F-keys, ordinary keys and mouse buttons are supported. Map the left stick to `W/A/S/D` in Armoury Crate or capture any four alternative keys in the wizard. The right stick remains a mouse and has its own live movement test in Diagnostics.
+The wizard first captures all four left-stick directions, then A, B, X, Y, all four D-pad directions and Menu. LB, LT, RB, RT, L3, R3, View, rear M1 and rear M2 are optional steps. Enter, Escape, arrow keys, F-keys, ordinary keys and mouse buttons are supported. Map the left stick to `W/A/S/D` in Armoury Crate or capture any four alternative keys in the wizard. The D-pad must emit four different signals. If the same key is received for two controls, the wizard stops and shows the collision instead of silently replacing movement with targeting.
+
+The minimap **WC** button remains visible even while the controller session is off. Left-click opens **RAW TEST**, which displays exactly what WoW receives before the addon binds anything. Move the left stick first: it must report `W`, `S`, `A`, `D`. If it reports arrow keys, the Armoury Crate profile—not Lua—is routing the stick to the D-pad targeting signals. Right-stick movement is reported as `MOUSE MOVE`.
 
 If the wizard does not advance when you press a control, that button is not sending a keyboard/mouse signal to WoW. Assign any unused key to it in the game's Armoury Crate Desktop Mode profile, return to WoW and press it again. For mouse-button capture, point the cursor at the capture window. Auto mode can select Gamepad Mode, which the old 1.12 client cannot consume as XInput.
 
@@ -43,7 +45,9 @@ Recommended device-side controls that do not need the wizard:
 | Right stick | Mouse | Camera, cursor and radial direction |
 | RB | Left mouse button | UI click |
 | RT | Right mouse button | Camera and world interaction |
+| L3 | Num Lock | Auto run |
 | R3 | Space | Jump |
+| Menu | F8 | Radial wheel / game menu |
 | View | Any unused key | WOW Controller settings |
 | M1 | Any unused key | Configurable; default settings |
 | M2 | Any unused key | Configurable; default interact |
@@ -52,12 +56,12 @@ The ABXY F9-F12, D-pad arrows, Menu F8, View F7 and rear F6/F5 profile is availa
 
 ## Controller menu
 
-Open it with `/wc`, `/octoport` or the **WC** button on the controller HUD.
+Open it by right-clicking the persistent **WC** minimap button, with `/wc`, `/octoport`, or with the smaller WC button on the controller HUD. Left-clicking the minimap button opens raw input testing.
 
 - **SETUP** — full wizard, safe ROG Ally profile, enable/disable and emergency restore.
 - **OVLADANI** — view or remap every controller action separately.
 - **HRANI** — auto target, auto quest, reticle, configurable M1/M2 actions, HUD, bar editor and radial settings.
-- **DIAGNOSTIKA** — live green signal for every mapped input plus right-stick mouse movement.
+- **DIAGNOSTIKA** — all controller inputs, native/pass-through state and explicit system-only ASUS buttons; **RAW TEST** displays actual incoming keys and mouse signals.
 
 Inside the menu, D-pad left/right changes tabs, up/down moves focus, A activates and B closes.
 
@@ -79,6 +83,7 @@ Inside the menu, D-pad left/right changes tabs, up/down moves focus, A activates
 
 - `/wc`, `/octoport` or `/op` — open Controller settings.
 - `/octoport setup` — start the binding wizard.
+- `/octoport test` — open raw keyboard/mouse input testing.
 - `/octoport preset` — select the session-only ROG Ally F-key profile.
 - `/octoport diagnostics` — open live input testing.
 - `/octoport restore` — remove saved `OCTOPORT_*` bindings, restore captured actions and turn the addon off.

@@ -49,6 +49,9 @@ end
 local function ComposeKey(raw)
   if not raw or raw == "" then return nil end
   raw = NormalizeMouseButton(raw)
+  if raw == "LSHIFT" or raw == "RSHIFT" then raw = "SHIFT" end
+  if raw == "LCTRL" or raw == "RCTRL" then raw = "CTRL" end
+  if raw == "LALT" or raw == "RALT" then raw = "ALT" end
   if raw == "SHIFT" or raw == "CTRL" or raw == "ALT" then return raw end
 
   local key = raw
@@ -260,6 +263,22 @@ function OctoPort:CaptureControllerKey(raw)
   local key = ComposeKey(raw)
   if not key or key == "UNKNOWN" then return end
 
+  -- Do not silently turn a stick direction into a D-pad action (or the other
+  -- way around). A duplicate signal means the device profile must be fixed.
+  for id, configuredKey in pairs(self.config.controllerKeys or {}) do
+    if configuredKey == key and id ~= self.captureDefinition.id then
+      local previous = self:GetBindingDefinition(id)
+      self.config.lastBindingCollision = {
+        key = key,
+        previous = id,
+        current = self.captureDefinition.id,
+      }
+      self.captureFrame.progress:SetText("|cffff5555KOLIZE: " .. key .. " uz pouziva " .. (previous and previous.label or id) .. ". Nastav v Armoury Crate jinou klavesu.|r")
+      self:RefreshBindingMenu()
+      return
+    end
+  end
+
   if not self:BindControllerKey(self.captureDefinition, key) then
     self.captureFrame.progress:SetText("|cffff5555WoW tuto vazbu odmitl. Zkus jine tlacitko nebo klavesu.|r")
     return
@@ -290,8 +309,142 @@ function OctoPort:RefreshBindingMenu()
   end
 
   if self.setupStatus then
-    self.setupStatus:SetText(complete and "|cff4df273OVLADAC JE PRIPRAVEN|r" or "|cffff6655DOKONCI PRUVODCE VSTUPU|r")
+    local collision = self.config.lastBindingCollision
+    if collision then
+      local previous = self:GetBindingDefinition(collision.previous)
+      local current = self:GetBindingDefinition(collision.current)
+      self.setupStatus:SetText("|cffff6655KOLIZE " .. collision.key .. ": " .. (previous and previous.label or collision.previous) .. " / " .. (current and current.label or collision.current) .. "|r")
+    else
+      self.setupStatus:SetText(complete and "|cff4df273OVLADAC JE PRIPRAVEN|r" or "|cffff6655DOKONCI PRUVODCE VSTUPU|r")
+    end
   end
+end
+
+local function RawInputMatch(key)
+  local matches = {}
+  local keys = OctoPort.config and OctoPort.config.controllerKeys or {}
+  local native = OctoPort.config and OctoPort.config.nativeModifiers or {}
+
+  for index = 1, table.getn(OctoPort.bindingDefinitions) do
+    local definition = OctoPort.bindingDefinitions[index]
+    local matched = keys[definition.id] == key
+    if definition.layer and native[key] == definition.layer then matched = true end
+    if matched then table.insert(matches, definition) end
+  end
+  return matches
+end
+
+function OctoPort:RecordRawInput(raw)
+  if not self.rawTestFrame or not self.rawTestFrame:IsVisible() then return end
+  local key = ComposeKey(raw)
+  if not key or key == "UNKNOWN" then return end
+
+  local matches = RawInputMatch(key)
+  local labels = "NEPRIRAZENO"
+  if table.getn(matches) > 0 then
+    local names = {}
+    for index = 1, table.getn(matches) do
+      table.insert(names, matches[index].label)
+      self:SignalInput(matches[index].id, "raw " .. key)
+    end
+    labels = table.concat(names, " + ")
+  end
+
+  local warning = ""
+  if key == "UP" or key == "DOWN" or key == "LEFT" or key == "RIGHT" then
+    warning = "Pokud jsi pohnul LEVOU PACKOU, je profil spatne: packa musi vysilat W/S/A/D, ne sipky D-padu."
+  elseif key == "W" or key == "S" or key == "A" or key == "D" then
+    warning = "W/S/A/D je spravny signal pro levou packu a nativni pohyb."
+  elseif table.getn(matches) == 0 then
+    warning = "Signal do WoW dorazil. Prirad ho v RUCNIM MAPOVANI nebo pruvodci."
+  end
+
+  self.rawTestFrame.last:SetText("RAW: |cffffffff" .. key .. "|r  ->  |cff4df273" .. labels .. "|r")
+  self.rawTestFrame.warning:SetText(warning)
+  self.rawInputHistory = self.rawInputHistory or {}
+  table.insert(self.rawInputHistory, 1, key .. "  ->  " .. labels)
+  while table.getn(self.rawInputHistory) > 7 do table.remove(self.rawInputHistory) end
+  self.rawTestFrame.history:SetText(table.concat(self.rawInputHistory, "\n"))
+end
+
+function OctoPort:CreateRawInputTest()
+  if self.rawTestFrame then return end
+
+  local frame = CreateFrame("Frame", "OctoPortRawInputTest", UIParent)
+  frame:SetWidth(600)
+  frame:SetHeight(460)
+  frame:SetPoint("CENTER", UIParent, "CENTER", 0, 25)
+  frame:SetFrameStrata("FULLSCREEN_DIALOG")
+  frame:SetBackdrop({
+    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
+    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+    tile = true, tileSize = 32, edgeSize = 32,
+    insets = { left = 10, right = 10, top = 10, bottom = 10 },
+  })
+  frame:EnableKeyboard(true)
+  frame:EnableMouse(true)
+  frame:Hide()
+
+  local title = MakeLabel(frame, "GameFontNormalLarge", "RAW TEST ROG ALLY")
+  title:SetPoint("TOP", frame, "TOP", 0, -30)
+  title:SetTextColor(0.24, 0.84, 0.81)
+
+  local body = MakeLabel(frame, "GameFontHighlightSmall",
+    "Postupne pohni levou packou a stiskni ABXY, D-pad, Menu, View, LB/LT, RB/RT, L3/R3 a M1/M2. Test ukazuje presny keyboard/mouse signal jeste pred zapnutim addonu.", 520)
+  body:SetPoint("TOP", title, "BOTTOM", 0, -16)
+  body:SetJustifyH("LEFT")
+
+  local last = MakeLabel(frame, "GameFontNormal", "RAW: cekam na vstup", 520)
+  last:SetPoint("TOPLEFT", body, "BOTTOMLEFT", 0, -24)
+  last:SetJustifyH("LEFT")
+
+  local warning = MakeLabel(frame, "GameFontHighlightSmall", "Leva packa musi ukazat W/S/A/D. D-pad musi ukazat sipky nebo ctyri jine samostatne klavesy.", 520)
+  warning:SetPoint("TOPLEFT", last, "BOTTOMLEFT", 0, -16)
+  warning:SetJustifyH("LEFT")
+  warning:SetTextColor(1.0, 0.72, 0.22)
+
+  local historyTitle = MakeLabel(frame, "GameFontNormalSmall", "POSLEDNI VSTUPY")
+  historyTitle:SetPoint("TOPLEFT", warning, "BOTTOMLEFT", 0, -24)
+  local history = MakeLabel(frame, "GameFontDisableSmall", "", 520)
+  history:SetPoint("TOPLEFT", historyTitle, "BOTTOMLEFT", 0, -8)
+  history:SetJustifyH("LEFT")
+
+  local close = MakeButton(frame, "ZAVRIT TEST", 150, function() OctoPort.rawTestFrame:Hide() end)
+  close:SetPoint("BOTTOM", frame, "BOTTOM", 0, 28)
+
+  frame:SetScript("OnKeyDown", function()
+    if arg1 == "ESCAPE" then this:Hide() else OctoPort:RecordRawInput(arg1) end
+  end)
+  frame:SetScript("OnMouseDown", function() OctoPort:RecordRawInput(arg1) end)
+  frame:SetScript("OnUpdate", function()
+    OctoPort.rawCursorElapsed = (OctoPort.rawCursorElapsed or 0) + arg1
+    if OctoPort.rawCursorElapsed < 0.12 then return end
+    OctoPort.rawCursorElapsed = 0
+    local x, y = GetCursorPosition()
+    if OctoPort.rawCursorX and (math.abs(x - OctoPort.rawCursorX) > 4 or math.abs(y - OctoPort.rawCursorY) > 4) then
+      last:SetText("RAW: |cffffffffMOUSE MOVE|r  ->  |cff4df273R-Stick / Mouse|r")
+      warning:SetText("Prava packa posila mys spravne.")
+      OctoPort:SignalInput("RSTICK", "raw mouse move")
+    end
+    OctoPort.rawCursorX = x
+    OctoPort.rawCursorY = y
+  end)
+
+  frame.last = last
+  frame.warning = warning
+  frame.history = history
+  self.rawTestFrame = frame
+end
+
+function OctoPort:StartRawInputTest()
+  self:CreateRawInputTest()
+  if self.configFrame then self.configFrame:Hide() end
+  self.rawInputHistory = {}
+  self.rawTestFrame.history:SetText("")
+  self.rawTestFrame.last:SetText("RAW: cekam na vstup")
+  self.rawTestFrame.warning:SetText("Leva packa musi ukazat W/S/A/D. D-pad musi ukazat sipky nebo ctyri jine samostatne klavesy.")
+  self.rawCursorX, self.rawCursorY = GetCursorPosition()
+  self.rawTestFrame:Show()
 end
 
 function OctoPort:UpdateInputDiagnostics()
@@ -318,10 +471,20 @@ function OctoPort:UpdateInputDiagnostics()
     elseif row.id == "RSTICK" and self.lastRightStickAt and now - self.lastRightStickAt < 0.65 then
       active = true
     end
-    if row.nativeMovement and self:GetControllerBindingKey(row.id) then
+    if row.systemOnly then
+      row:SetBackdropColor(0.16, 0.10, 0.03, 0.94)
+      row:SetBackdropBorderColor(0.78, 0.52, 0.18, 0.90)
+      row.state:SetText("SYSTEM")
+      row.state:SetTextColor(1.00, 0.68, 0.25)
+    elseif (row.nativeMovement or row.nativeAction) and self:GetControllerBindingKey(row.id) then
       row:SetBackdropColor(0.04, 0.18, 0.34, 0.98)
       row:SetBackdropBorderColor(0.28, 0.62, 1.00, 1)
       row.state:SetText("NATIVE")
+      row.state:SetTextColor(0.38, 0.72, 1.00)
+    elseif row.passthrough and self:GetControllerBindingKey(row.id) then
+      row:SetBackdropColor(0.04, 0.18, 0.34, 0.98)
+      row:SetBackdropBorderColor(0.28, 0.62, 1.00, 1)
+      row.state:SetText("PASS")
       row.state:SetTextColor(0.38, 0.72, 1.00)
     elseif active then
       row:SetBackdropColor(0.04, 0.38, 0.28, 0.98)
@@ -377,6 +540,11 @@ local function BuildSetupPanel(panel)
   end))
   controls:SetPoint("LEFT", wizard, "RIGHT", 10, 0)
 
+  local rawTest = AddFocusable(panel, MakeButton(panel, "RYCHLY TEST", 130, function()
+    OctoPort:StartRawInputTest()
+  end))
+  rawTest:SetPoint("LEFT", controls, "RIGHT", 10, 0)
+
   local preset = AddFocusable(panel, MakeButton(panel, "ROG ALLY PROFIL", 150, function()
     OctoPort:ApplyRecommendedBindings()
   end))
@@ -394,7 +562,7 @@ local function BuildSetupPanel(panel)
   enable:SetPoint("TOPLEFT", preset, "BOTTOMLEFT", 0, -12)
 
   local note = MakeLabel(panel, "GameFontDisableSmall",
-    "V Armoury Crate nastav CONTROL MODE = DESKTOP a levou packu na W/A/S/D, nebo jeji ctyri smery zachyt v pruvodci. Addon pri beznem hrani nikdy nevola SaveBindings. M1/M2 prirad vlastnim klavesam.", 470)
+    "V Armoury Crate nastav CONTROL MODE = DESKTOP. Leva packa musi vysilat W/A/S/D a D-pad ctyri odlisne klavesy. M1/M2 nastav jako samostatna tlacitka. Systemova tlacitka Command Center a Armoury Crate addon zachytit nemuze.", 470)
   note:SetPoint("TOPLEFT", enable, "BOTTOMLEFT", 0, -18)
   note:SetJustifyH("LEFT")
 
@@ -576,6 +744,8 @@ local function BuildDiagnosticsPanel(panel)
     table.insert(definitions, OctoPort.bindingDefinitions[index])
   end
   table.insert(definitions, { id = "RSTICK", label = "R-Stick / Mouse" })
+  table.insert(definitions, { id = "COMMANDCENTER", label = "Command Center", systemOnly = true })
+  table.insert(definitions, { id = "ARMOURY", label = "Armoury Crate", systemOnly = true })
   local leftCount = math.ceil(table.getn(definitions) / 2)
 
   for index = 1, table.getn(definitions) do
@@ -605,6 +775,9 @@ local function BuildDiagnosticsPanel(panel)
 
     row.id = definition.id
     row.nativeMovement = definition.movement
+    row.nativeAction = definition.nativeAction
+    row.passthrough = definition.passthrough
+    row.systemOnly = definition.systemOnly
     row.state = state
     OctoPort.diagnosticRows[index] = row
   end
@@ -614,15 +787,20 @@ local function BuildDiagnosticsPanel(panel)
   end))
   rebind:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 0)
 
+  local rawTest = AddFocusable(panel, MakeButton(panel, "RAW TEST", 120, function()
+    OctoPort:StartRawInputTest()
+  end))
+  rawTest:SetPoint("LEFT", rebind, "RIGHT", 10, 0)
+
   local version = MakeLabel(panel, "GameFontDisableSmall", "WOW Controller " .. OctoPort.version .. "  |  WoW API 11200")
-  version:SetPoint("LEFT", rebind, "RIGHT", 14, 0)
+  version:SetPoint("LEFT", rawTest, "RIGHT", 14, 0)
 end
 
 function OctoPort:CreateConfigMenu()
   if self.configFrame then return end
   local frame = CreateFrame("Frame", "OctoPortConfigFrame", UIParent)
   frame:SetWidth(700)
-  frame:SetHeight(520)
+  frame:SetHeight(650)
   frame:SetPoint("CENTER", UIParent, "CENTER", 0, 25)
   frame:SetFrameStrata("DIALOG")
   frame:SetClampedToScreen(true)
@@ -667,7 +845,7 @@ function OctoPort:CreateConfigMenu()
   BuildGameplayPanel(self.configPanels[3])
   BuildDiagnosticsPanel(self.configPanels[4])
 
-  local hint = MakeLabel(frame, "GameFontDisableSmall", "D-pad navigace  |  A potvrdit  |  B zavrit  |  /wc otevrit")
+  local hint = MakeLabel(frame, "GameFontDisableSmall", "D-pad navigace  |  A potvrdit  |  B zavrit  |  WC u minimapy = test")
   hint:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 28, 28)
 
   frame:SetScript("OnUpdate", function()

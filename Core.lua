@@ -1,8 +1,8 @@
--- WOW Controller 0.6.1
+-- WOW Controller 0.7.0
 -- Controller-first interface for OctoWoW / World of Warcraft 1.12.x.
 
 OctoPort = OctoPort or {}
-OctoPort.version = "0.6.1"
+OctoPort.version = "0.7.0"
 
 BINDING_HEADER_OCTOPORT = "WOW Controller"
 BINDING_NAME_OCTOPORT_TOGGLEBAGS = "Open / close all bags"
@@ -105,6 +105,7 @@ end
 function OctoPort:ShowCommands()
   self:Print("/octoport - open controller settings")
   self:Print("/octoport setup - start the controller binding wizard")
+  self:Print("/octoport test - open the raw keyboard/mouse input test")
   self:Print("/octoport preset - apply safe session-only ROG Ally keys")
   self:Print("/octoport restore - disable addon and restore original bindings")
   self:Print("/octoport edit - show all three action layers")
@@ -162,6 +163,8 @@ function OctoPort:HandleSlash(message)
 
   if message == "setup" then
     if self.StartBindingWizard then self:StartBindingWizard() end
+  elseif message == "test" then
+    if self.StartRawInputTest then self:StartRawInputTest() end
   elseif message == "preset" then
     self:ApplyRecommendedBindings()
   elseif message == "restore" then
@@ -258,7 +261,7 @@ events:SetScript("OnEvent", function()
       OctoPort.config.firstRunSeen = true
       OctoPort:Print("Unsafe bindings from an older version were removed. The addon is OFF until you enable it again.")
       OctoPort:ShowConfigTab(1, true)
-    elseif (OctoPort.config.bindingVersion or 0) < 6 and OctoPort.ShowConfigTab then
+    elseif (OctoPort.config.bindingVersion or 0) < 7 and OctoPort.ShowConfigTab then
       OctoPort.config.firstRunSeen = true
       OctoPort:ShowConfigTab(1, true)
     elseif not OctoPort.config.firstRunSeen and OctoPort.ToggleConfig then
