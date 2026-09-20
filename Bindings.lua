@@ -151,13 +151,14 @@ function OctoPort:RefreshSetupState()
   local complete = true
   for index = 1, table.getn(bindingDefinitions) do
     local definition = bindingDefinitions[index]
-    if definition.required and not self:GetControllerBindingKey(definition) then
+    local fallbackTarget = self.config.arrowMovementFallback and (definition.id == "DUP" or definition.id == "DDOWN" or definition.id == "DLEFT" or definition.id == "DRIGHT")
+    if definition.required and not fallbackTarget and not self:GetControllerBindingKey(definition) then
       complete = false
       break
     end
   end
   self.config.setupComplete = complete
-  if complete then self.config.bindingVersion = 7 end
+  if complete then self.config.bindingVersion = 8 end
   if self.RefreshBindingMenu then self:RefreshBindingMenu() end
   return complete
 end
@@ -235,11 +236,65 @@ function OctoPort:ApplyRecommendedBindings()
   end
 
   self.config.movementBindingVersion = 2
-  self.config.bindingVersion = 7
+  self.config.bindingVersion = 8
   self.config.lastBindingCollision = nil
+  self.config.arrowMovementFallback = false
+  self.config.menuOnlyMode = false
   self:RefreshSetupState()
   if self.config.enabled then self:ActivateSessionBindings() end
   self:Print("Safe ROG Ally profile selected. It is session-only and does not overwrite saved WoW bindings.")
+end
+
+function OctoPort:ApplyArrowMovementFallback()
+  if not self.config then self:InitializeConfig() end
+  if self.sessionBindingsActive then self:DeactivateSessionBindings() end
+
+  self.config.enabled = false
+  self.config.controllerKeys = {}
+  self.config.nativeModifiers = { SHIFT = "shift", CTRL = "ctrl" }
+
+  for index = 1, table.getn(bindingDefinitions) do
+    local definition = bindingDefinitions[index]
+    local target = definition.id == "DUP" or definition.id == "DDOWN" or definition.id == "DLEFT" or definition.id == "DRIGHT"
+    if definition.defaultKey and not definition.layer and not target then
+      self.config.controllerKeys[definition.id] = definition.defaultKey
+    end
+  end
+
+  self.config.controllerKeys.LSUP = "UP"
+  self.config.controllerKeys.LSDOWN = "DOWN"
+  self.config.controllerKeys.LSLEFT = "LEFT"
+  self.config.controllerKeys.LSRIGHT = "RIGHT"
+  self.config.controllerKeys.VIEW = "ESCAPE"
+  self.config.arrowMovementFallback = true
+  self.config.menuOnlyMode = false
+  self.config.lastBindingCollision = nil
+  self.config.movementBindingVersion = 2
+  self.config.bindingVersion = 8
+  self:RefreshSetupState()
+
+  self.config.enabled = true
+  self:ActivateSessionBindings()
+  if self.SetUIEnabled then self:SetUIEnabled(true) end
+  self:Print("Emergency arrow movement enabled. Stick and D-pad both move; D-pad targeting is off. Escape opens Controller settings.")
+end
+
+function OctoPort:SetQuickMenuKey(key)
+  if not key or key == "" or key == "UNKNOWN" then return false end
+  if not self.config then self:InitializeConfig() end
+
+  local wasEnabled = self.config.enabled and true or false
+  local wasMenuOnly = self.config.menuOnlyMode and true or false
+  if self.sessionBindingsActive then self:DeactivateSessionBindings() end
+  self.config.enabled = false
+  self:BindControllerKey("VIEW", key)
+  self.config.lastBindingCollision = nil
+  self.config.menuOnlyMode = (not wasEnabled) or wasMenuOnly
+  self.config.enabled = true
+  self:ActivateSessionBindings()
+  if self.SetUIEnabled then self:SetUIEnabled(true) end
+  self:Print(key .. " now opens WOW Controller. The binding is session-only and will be restored on logout or disable.")
+  return true
 end
 
 function OctoPort:DeactivateSessionBindings()
@@ -268,7 +323,8 @@ function OctoPort:ActivateSessionBindings()
   for index = 1, table.getn(bindingDefinitions) do
     local definition = bindingDefinitions[index]
     local key = self.config.controllerKeys and self.config.controllerKeys[definition.id]
-    if key and key ~= "" and definition.command and not definition.passthrough then
+    local allowedByMode = not self.config.menuOnlyMode or definition.id == "VIEW"
+    if allowedByMode and key and key ~= "" and definition.command and not definition.passthrough then
       if self.sessionBindingBackup[key] == nil then
         self.sessionBindingBackup[key] = CurrentBinding(key)
       end
@@ -324,6 +380,8 @@ end
 
 function OctoPort:RestoreBindings()
   self.config.enabled = false
+  self.config.menuOnlyMode = false
+  self.config.arrowMovementFallback = false
   self:DeactivateSessionBindings()
   self:RecoverLegacyBindings(true)
   if self.SetUIEnabled then self:SetUIEnabled(false) end

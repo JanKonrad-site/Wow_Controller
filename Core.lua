@@ -1,8 +1,8 @@
--- WOW Controller 0.7.0
+-- WOW Controller 0.7.1
 -- Controller-first interface for OctoWoW / World of Warcraft 1.12.x.
 
 OctoPort = OctoPort or {}
-OctoPort.version = "0.7.0"
+OctoPort.version = "0.7.1"
 
 BINDING_HEADER_OCTOPORT = "WOW Controller"
 BINDING_NAME_OCTOPORT_TOGGLEBAGS = "Open / close all bags"
@@ -48,6 +48,8 @@ local defaults = {
   bindingBackup = nil,
   controllerKeys = {},
   movementBindingVersion = 0,
+  arrowMovementFallback = false,
+  menuOnlyMode = false,
   autoTarget = false,
   autoAcceptQuests = false,
   radialHold = 0.35,
@@ -106,6 +108,7 @@ function OctoPort:ShowCommands()
   self:Print("/octoport - open controller settings")
   self:Print("/octoport setup - start the controller binding wizard")
   self:Print("/octoport test - open the raw keyboard/mouse input test")
+  self:Print("/octoport arrows - emergency movement when the stick emits arrow keys")
   self:Print("/octoport preset - apply safe session-only ROG Ally keys")
   self:Print("/octoport restore - disable addon and restore original bindings")
   self:Print("/octoport edit - show all three action layers")
@@ -131,6 +134,7 @@ function OctoPort:ResetLayout()
 end
 
 function OctoPort:SetEnabled(enabled)
+  self.config.menuOnlyMode = false
   self.config.enabled = enabled and true or false
   if self.config.enabled then
     if self.ActivateSessionBindings then self:ActivateSessionBindings() end
@@ -165,6 +169,8 @@ function OctoPort:HandleSlash(message)
     if self.StartBindingWizard then self:StartBindingWizard() end
   elseif message == "test" then
     if self.StartRawInputTest then self:StartRawInputTest() end
+  elseif message == "arrows" then
+    if self.ApplyArrowMovementFallback then self:ApplyArrowMovementFallback() end
   elseif message == "preset" then
     self:ApplyRecommendedBindings()
   elseif message == "restore" then
@@ -261,7 +267,7 @@ events:SetScript("OnEvent", function()
       OctoPort.config.firstRunSeen = true
       OctoPort:Print("Unsafe bindings from an older version were removed. The addon is OFF until you enable it again.")
       OctoPort:ShowConfigTab(1, true)
-    elseif (OctoPort.config.bindingVersion or 0) < 7 and OctoPort.ShowConfigTab then
+    elseif (OctoPort.config.bindingVersion or 0) < 8 and OctoPort.ShowConfigTab then
       OctoPort.config.firstRunSeen = true
       OctoPort:ShowConfigTab(1, true)
     elseif not OctoPort.config.firstRunSeen and OctoPort.ToggleConfig then

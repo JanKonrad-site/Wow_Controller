@@ -43,7 +43,7 @@ function IsControlKeyDown() return false end
 function IsAltKeyDown() return false end
 
 OctoPort = {
-  version = "0.7.0",
+  version = "0.7.1",
   config = {
     enabled = false,
     controllerKeys = { LSUP = "W", RB = "BUTTON1" },
@@ -59,6 +59,11 @@ OctoPort = {
 function OctoPort:SignalInput(id, state)
   self.lastControllerInput = id
   self.lastControllerInputState = state
+end
+
+function OctoPort:SetQuickMenuKey(key)
+  self.testMenuKey = key
+  return true
 end
 
 dofile("Menu.lua")
@@ -81,6 +86,14 @@ arg1 = "LSHIFT"
 OctoPort.rawTestFrame.scripts.OnKeyDown()
 assert(string.find(OctoPort.rawTestFrame.last.text, "LB layer", 1, true), "left/right modifier signal was not normalized")
 
+arg1 = "ESCAPE"
+OctoPort.rawTestFrame.scripts.OnKeyDown()
+assert(OctoPort.rawTestFrame.visible, "Escape incorrectly closed raw testing")
+assert(string.find(OctoPort.rawTestFrame.last.text, "ESCAPE", 1, true), "Escape was not shown as raw input")
+OctoPort.rawTestFrame.menuButton.scripts.OnClick()
+assert(OctoPort.testMenuKey == "ESCAPE", "last working input could not be assigned to menu")
+
+OctoPort.rawTestFrame:Show()
 arg1 = "LeftButton"
 OctoPort.rawTestFrame.scripts.OnMouseDown()
 assert(string.find(OctoPort.rawTestFrame.last.text, "RB / Left Click", 1, true), "raw mouse signal was not identified")

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.1
+
+- Fixed raw testing so `Escape` is displayed instead of closing the test, allowing the default Desktop Mode B/Menu signal to be diagnosed.
+- Added **POSLEDNI VSTUP = MENU**, which turns any working raw key into a safe session-only settings key.
+- Added a menu-only safety mode that activates no movement, targeting or face-button bindings.
+- Added **CHUZE ZE SIPEK** for devices whose left stick currently emits arrow keys: arrows bind to native movement, `Escape` opens settings and D-pad targeting is disabled to prevent collisions.
+- Added automated restoration tests for both fallback modes.
+
 ## 0.7.0
 
 - Added an always-visible `WC` minimap button: left-click opens raw controller testing and right-click opens Setup, even while the addon is disabled.
