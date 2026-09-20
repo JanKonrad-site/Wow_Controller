@@ -21,6 +21,13 @@ local bindingDefinitions = {
   { id = "MENU",   label = "Menu",        command = "OCTOPORT_RADIAL",       defaultKey = "F8",    required = true },
   { id = "LB",     label = "LB layer",    command = "OCTOPORT_LAYER_LB",     nativeKey = "SHIFT", layer = "shift" },
   { id = "LT",     label = "LT layer",    command = "OCTOPORT_LAYER_LT",     nativeKey = "CTRL",  layer = "ctrl" },
+  -- RB/RT remain native mouse buttons in Armoury Crate Desktop Mode. They are
+  -- recorded for the tester, but deliberately never rebound by the addon.
+  { id = "RB",     label = "RB / Left Click",  defaultKey = "BUTTON1", passthrough = true },
+  { id = "RT",     label = "RT / Right Click", defaultKey = "BUTTON2", passthrough = true },
+  -- Stick clicks use Blizzard's own binding commands, just like movement.
+  { id = "L3",     label = "L3 / Auto Run", command = "TOGGLEAUTORUN", defaultKey = "NUMLOCK", nativeAction = true },
+  { id = "R3",     label = "R3 / Jump",     command = "JUMP",          defaultKey = "SPACE",   nativeAction = true },
   { id = "VIEW",   label = "View / Settings", command = "OCTOPORT_OPENCONFIG", defaultKey = "F7" },
   { id = "M1",     label = "Rear M1",     command = "OCTOPORT_REAR_M1",      defaultKey = "F6" },
   { id = "M2",     label = "Rear M2",     command = "OCTOPORT_REAR_M2",      defaultKey = "F5" },
@@ -104,7 +111,8 @@ end
 function OctoPort:EnsureMovementDefaults()
   if not self.config then return end
   self.config.controllerKeys = self.config.controllerKeys or {}
-  if (tonumber(self.config.movementBindingVersion) or 0) >= 1 then return end
+  local profileVersion = tonumber(self.config.movementBindingVersion) or 0
+  if profileVersion >= 2 then return end
 
   local assigned = {}
   for id, key in pairs(self.config.controllerKeys) do
@@ -113,13 +121,17 @@ function OctoPort:EnsureMovementDefaults()
 
   for index = 1, table.getn(bindingDefinitions) do
     local definition = bindingDefinitions[index]
-    if definition.movement and not self.config.controllerKeys[definition.id] and not assigned[definition.defaultKey] then
+    local addDefault = profileVersion < 1 and definition.movement
+    if profileVersion < 2 and (definition.id == "RB" or definition.id == "RT" or definition.id == "L3" or definition.id == "R3") then
+      addDefault = true
+    end
+    if addDefault and not self.config.controllerKeys[definition.id] and not assigned[definition.defaultKey] then
       self.config.controllerKeys[definition.id] = definition.defaultKey
       assigned[definition.defaultKey] = definition.id
     end
   end
 
-  self.config.movementBindingVersion = 1
+  self.config.movementBindingVersion = 2
 end
 
 function OctoPort:GetControllerBindingKey(definition)
@@ -145,7 +157,7 @@ function OctoPort:RefreshSetupState()
     end
   end
   self.config.setupComplete = complete
-  if complete then self.config.bindingVersion = 6 end
+  if complete then self.config.bindingVersion = 7 end
   if self.RefreshBindingMenu then self:RefreshBindingMenu() end
   return complete
 end
@@ -158,9 +170,15 @@ function OctoPort:BindControllerKey(definition, key)
   self.config.controllerKeys = self.config.controllerKeys or {}
   self.config.nativeModifiers = self.config.nativeModifiers or {}
 
-  -- One physical key may own only one controller action.
+  -- One physical key may own only one controller action. Keep a visible
+  -- record when a new capture displaced an older control; this is the most
+  -- common sign that Armoury Crate sends arrows for both the stick and D-pad.
+  local displaced = nil
   for id, configuredKey in pairs(self.config.controllerKeys) do
-    if configuredKey == key then self.config.controllerKeys[id] = nil end
+    if configuredKey == key and id ~= definition.id then
+      self.config.controllerKeys[id] = nil
+      displaced = id
+    end
   end
 
   if definition.layer and IsModifier(key) then
@@ -178,6 +196,23 @@ function OctoPort:BindControllerKey(definition, key)
       end
     end
     self.config.controllerKeys[definition.id] = key
+  end
+
+  if displaced then
+    self.config.lastBindingCollision = {
+      key = key,
+      previous = displaced,
+      current = definition.id,
+    }
+    local previousDefinition = FindDefinition(displaced)
+    self:Print("Input collision: " .. key .. " was used by " .. (previousDefinition and previousDefinition.label or displaced) .. ". Give the stick and D-pad different keys in Armoury Crate.")
+  elseif self.config.lastBindingCollision then
+    local collision = self.config.lastBindingCollision
+    local previousKey = self.config.controllerKeys[collision.previous]
+    local currentKey = self.config.controllerKeys[collision.current]
+    if previousKey and currentKey and previousKey ~= currentKey then
+      self.config.lastBindingCollision = nil
+    end
   end
 
   -- Refresh only the temporary session. Normal setup never writes WoW's
@@ -199,8 +234,9 @@ function OctoPort:ApplyRecommendedBindings()
     end
   end
 
-  self.config.movementBindingVersion = 1
-  self.config.bindingVersion = 6
+  self.config.movementBindingVersion = 2
+  self.config.bindingVersion = 7
+  self.config.lastBindingCollision = nil
   self:RefreshSetupState()
   if self.config.enabled then self:ActivateSessionBindings() end
   self:Print("Safe ROG Ally profile selected. It is session-only and does not overwrite saved WoW bindings.")
@@ -232,7 +268,7 @@ function OctoPort:ActivateSessionBindings()
   for index = 1, table.getn(bindingDefinitions) do
     local definition = bindingDefinitions[index]
     local key = self.config.controllerKeys and self.config.controllerKeys[definition.id]
-    if key and key ~= "" then
+    if key and key ~= "" and definition.command and not definition.passthrough then
       if self.sessionBindingBackup[key] == nil then
         self.sessionBindingBackup[key] = CurrentBinding(key)
       end
@@ -248,9 +284,11 @@ local function CaptureLegacyControllerKeys(config)
   config.controllerKeys = config.controllerKeys or {}
   for index = 1, table.getn(bindingDefinitions) do
     local definition = bindingDefinitions[index]
-    local key = GetBindingKey(definition.command)
-    if key and not config.controllerKeys[definition.id] and not IsModifier(key) then
-      config.controllerKeys[definition.id] = key
+    if definition.command then
+      local key = GetBindingKey(definition.command)
+      if key and not config.controllerKeys[definition.id] and not IsModifier(key) then
+        config.controllerKeys[definition.id] = key
+      end
     end
   end
 end

@@ -49,20 +49,28 @@ function OctoPort:Print() end
 
 dofile("Bindings.lua")
 
--- Existing 0.5 profiles gain safe left-stick defaults without touching the
--- live or persisted WoW binding set.
+-- Existing profiles gain safe left-stick and complete ROG Ally defaults
+-- without touching the live or persisted WoW binding set.
 OctoPort:EnsureMovementDefaults()
 assert(OctoPort.config.controllerKeys.LSUP == "W", "forward movement default missing")
 assert(OctoPort.config.controllerKeys.LSDOWN == "S", "backward movement default missing")
 assert(OctoPort.config.controllerKeys.LSLEFT == "A", "left strafe default missing")
 assert(OctoPort.config.controllerKeys.LSRIGHT == "D", "right strafe default missing")
+assert(OctoPort.config.controllerKeys.RB == "BUTTON1", "native RB default missing")
+assert(OctoPort.config.controllerKeys.RT == "BUTTON2", "native RT default missing")
+assert(OctoPort.config.controllerKeys.L3 == "NUMLOCK", "L3 default missing")
+assert(OctoPort.config.controllerKeys.R3 == "SPACE", "R3 default missing")
 assert(saveCount == 0, "movement defaults persisted bindings")
 
 -- Setup stores a profile but must not touch or persist WoW bindings.
 bindings.F9 = "OPENCHAT"
 bindings.W = "OPENCHAT"
+bindings.BUTTON1 = "CAMERAORSELECTORMOVE"
+bindings.BUTTON2 = "TURNORACTION"
 OctoPort:ApplyRecommendedBindings()
 assert(bindings.F9 == "OPENCHAT", "profile selection changed a live binding")
+assert(bindings.BUTTON1 == "CAMERAORSELECTORMOVE", "profile selection stole native left click")
+assert(bindings.BUTTON2 == "TURNORACTION", "profile selection stole native right click")
 assert(saveCount == 0, "normal profile selection persisted bindings")
 
 -- Enabling applies a temporary command and disabling restores it exactly.
@@ -73,12 +81,27 @@ assert(bindings.W == "MOVEFORWARD", "native forward binding missing")
 assert(bindings.S == "MOVEBACKWARD", "native backward binding missing")
 assert(bindings.A == "STRAFELEFT", "native left strafe binding missing")
 assert(bindings.D == "STRAFERIGHT", "native right strafe binding missing")
+assert(bindings.NUMLOCK == "TOGGLEAUTORUN", "native L3 autorun binding missing")
+assert(bindings.SPACE == "JUMP", "native R3 jump binding missing")
+assert(bindings.BUTTON1 == "CAMERAORSELECTORMOVE", "session activation stole native left click")
+assert(bindings.BUTTON2 == "TURNORACTION", "session activation stole native right click")
 assert(saveCount == 0, "session activation persisted bindings")
 OctoPort:DeactivateSessionBindings()
 assert(bindings.F9 == "OPENCHAT", "session cleanup did not restore original A binding")
 assert(bindings.W == "OPENCHAT", "session cleanup did not restore original movement binding")
 assert(bindings.S == nil and bindings.A == nil and bindings.D == nil, "session cleanup left native movement bindings behind")
+assert(bindings.NUMLOCK == nil and bindings.SPACE == nil, "session cleanup left stick-click bindings behind")
+assert(bindings.BUTTON1 == "CAMERAORSELECTORMOVE", "session cleanup changed native left click")
+assert(bindings.BUTTON2 == "TURNORACTION", "session cleanup changed native right click")
 assert(saveCount == 0, "session cleanup persisted bindings")
+
+-- Duplicate device signals are surfaced instead of silently looking valid.
+OctoPort.config.enabled = false
+assert(OctoPort:BindControllerKey("DUP", "W"), "duplicate input capture failed")
+assert(OctoPort.config.controllerKeys.LSUP == nil, "duplicate signal still owns two controls")
+assert(OctoPort.config.lastBindingCollision and OctoPort.config.lastBindingCollision.previous == "LSUP", "duplicate signal was not reported")
+OctoPort:ApplyRecommendedBindings()
+assert(OctoPort.config.lastBindingCollision == nil, "preset did not clear old collision warning")
 
 -- Migration is intentionally the sole persistent write. It repairs commands
 -- saved by versions 0.1-0.4 and then leaves the addon disabled.

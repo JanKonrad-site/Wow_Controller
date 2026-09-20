@@ -1,4 +1,4 @@
-WOW CONTROLLER 0.6.1 - ROG ALLY X / ARMOURY CRATE SE
+WOW CONTROLLER 0.7.0 - ROG ALLY X / ARMOURY CRATE SE
 ================================================
 
 RYCHLY START
@@ -6,9 +6,11 @@ RYCHLY START
 1. Aktualizuj addon v OctoLauncheru a spust hru.
 2. V Command Centeru nastav CONTROL MODE = DESKTOP (ne Auto ani Gamepad).
 3. Po aktualizaci z 0.1-0.4 addon jednou opravi stare ulozene bindy a zustane OFF.
-4. Ve hre napis /wc a zvol ROG ALLY PROFIL nebo SPUSTIT PRUVODCE.
-5. View, LB, LT, M1 a M2 jsou volitelne; lze je v pruvodci preskocit.
-6. Zvol ZAPNOUT BEZPECNE a v DIAGNOSTICE over tlacitka i pravou packu.
+4. Klikni levym tlacitkem na tyrkysovou ikonku WC u minimapy. Neni treba psat /wc.
+5. V RAW TESTU musi leva packa ukazat W/S/A/D a D-pad ctyri jine signaly.
+6. Pravym klikem na WC otevri nastaveni a zvol profil nebo pruvodce.
+7. RB, RT, L3, R3, View, LB, LT, M1 a M2 jsou volitelne kroky.
+8. Zvol ZAPNOUT BEZPECNE a v DIAGNOSTICE over vsechny vstupy.
 
 Klient WoW 1.12 neumi XInput, proto Gamepad Mode nefunguje. Leva packa vysila
 W/A/S/D a addon je po dobu aktivni relace navaze primo na nativni pohybove
@@ -25,12 +27,16 @@ Prava packa       Mouse                Kurzor / kamera / radialni vyber
 RB                Levy klik            Vyber v UI
 RT                Pravy klik           Kamera / interakce
 R3                Space                Skok
+L3                NumLock              Automaticky beh
+Menu              F8                   Radialni kolo / herni menu
 View              Libovolna klavesa    Nastaveni WOW Controller
 M1                Libovolna klavesa    Nastavitelna akce (vychozi nastaveni)
 M2                Libovolna klavesa    Nastavitelna akce (vychozi interakce)
 
 U M1/M2 vypni v Armoury Crate volbu Set as Secondary Function. Tlacitka Command
 Center a Armoury Crate jsou systemova a nelze je premapovat ani zachytit addonem.
+Pokud leva packa v RAW TESTU ukazuje sipky, sdili signal s D-padem a addon je
+nemuze rozlisit. Oprav levou packu na W/A/S/D v hernim Desktop Mode profilu.
 
 BEZPECNY PROFIL
 ---------------
@@ -40,6 +46,8 @@ Menu              F8
 LB/LT             Shift/Ctrl
 View              F7
 M1/M2             F6/F5
+L3/R3             NumLock/Space
+RB/RT              Levy/Pravy klik (pouze pruchozi, addon je neprepisuje)
 
 Pouzij tlacitko ROG ALLY PROFIL nebo prikaz /octoport preset. Profil vcetne
 ctyr smeru leve packy se aktivuje jen pro aktualni relaci a pri vypnuti nebo
@@ -50,6 +58,7 @@ OVLADANI VE HRE
 /wc                         Controller menu
 /octoport setup             Pruvodce mapovanim
 /octoport diagnostics       Zivy test vstupu
+/octoport test              Raw test skutecnych signalu
 /octoport preset            Bezpecny session-only profil
 /octoport restore           Nouzove vycistit bindy a addon vypnout
 /octoport wheel             Editor radialniho kola

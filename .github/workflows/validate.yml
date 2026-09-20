@@ -18,7 +18,9 @@ jobs:
         run: luac5.1 -p Core.lua Bindings.lua UI.lua Reticle.lua Radial.lua Quest.lua Loot.lua Menu.lua
 
       - name: Test binding recovery and session restore
-        run: lua5.1 tests/safety_harness.lua
+        run: |
+          lua5.1 tests/safety_harness.lua
+          lua5.1 tests/ui_harness.lua
 
       - name: Check bindings XML
         run: xmllint --noout Bindings.xml
@@ -32,6 +34,8 @@ jobs:
           ! grep -REn 'UIParent_ManageFramePositions[[:space:]]*=' --include='*.lua' .
           ! grep -REn 'SetParent\(' UI.lua
           grep -q 'command = "MOVEFORWARD"' Bindings.lua
+          grep -q 'function OctoPort:CreateMinimapButton' UI.lua
+          grep -q 'function OctoPort:StartRawInputTest' Menu.lua
           ! grep -q 'OCTOPORT_MOVE_' Bindings.xml
           ! grep -REn '(MoveForward|MoveBackward|StrafeLeft|StrafeRight)(Start|Stop)\(' --include='*.lua' .
 

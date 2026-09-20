@@ -8,7 +8,7 @@ the current OctoLauncher entry expects one addon TOC in the repository root.
 
 ## Compatibility decision
 
-| ConsolePort area | 1.12 implementation | Status after 0.6.1 |
+| ConsolePort area | 1.12 implementation | Status after 0.7.0 |
 |---|---|---|
 | Controller setup | Capture keyboard/mouse signals produced by Armoury Crate | Safe session-only setup |
 | Character movement | Four left-stick key signals bound directly to Blizzard movement commands | Implemented; protected-Lua-free, session-only and reversible |
@@ -24,7 +24,7 @@ the current OctoLauncher entry expects one addon TOC in the repository root.
 | Unit-frame control | Explicit party/raid focus graph | Planned; no global unit-frame hooks |
 | Loot control | Controller focus and loot actions | Planned; current cursor placement remains opt-in |
 | Quest control | Confirm/back and optional displayed-quest acceptance | Partial, opt-in |
-| Device calibration | Per-input diagnostics for emitted keys/mouse | Partial |
+| Device calibration | Persistent minimap entry, raw keyboard/mouse tester and duplicate-signal warnings | Implemented for keyboard/mouse emulation |
 
 ## Non-negotiable safety rules
 
