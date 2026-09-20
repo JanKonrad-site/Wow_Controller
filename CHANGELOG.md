@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.0
+
+- Restored four-direction left-stick movement using the keyboard signals emitted by Armoury Crate or Steam Input.
+- Routes stick presses to WoW 1.12 native movement functions and always stops movement on key release.
+- Uses the left stick for directional navigation while Controller settings or the radial wheel is open.
+- Automatically adds safe `W/A/S/D` movement defaults to existing 0.5 profiles without changing the saved WoW binding set.
+- Keeps movement bindings session-only and restores the exact prior W/A/S/D actions on disable or logout.
+- Expanded the safety harness to verify movement start, movement stop, zero normal-play persistence and exact restoration.
+
 ## 0.5.0
 
 - Added a one-time migration that removes persisted `OCTOPORT_*` commands and restores bindings captured before versions 0.1-0.4 changed them.

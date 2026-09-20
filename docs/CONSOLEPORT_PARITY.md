@@ -8,9 +8,10 @@ the current OctoLauncher entry expects one addon TOC in the repository root.
 
 ## Compatibility decision
 
-| ConsolePort area | 1.12 implementation | Status after 0.5.0 |
+| ConsolePort area | 1.12 implementation | Status after 0.6.0 |
 |---|---|---|
 | Controller setup | Capture keyboard/mouse signals produced by Armoury Crate | Safe session-only setup |
+| Character movement | Four left-stick key signals routed to native WoW movement start/stop functions | Implemented; session-only and reversible |
 | Action bars | Addon-owned visual mirrors of Blizzard action slots | Safe base implemented |
 | Modifier layers | Shift/Ctrl or mapped LB/LT layers | Implemented |
 | Targeting | Friendly/enemy cycling through 1.12 targeting API | Implemented; hardware test required |
@@ -44,8 +45,15 @@ the current OctoLauncher entry expects one addon TOC in the repository root.
   retain notices, document differences and follow the Modified Version terms.
 - TurtleController: <https://github.com/sigboe/TurtleController>
 - ShaguController: <https://github.com/shagu/ShaguController>
+- ConsoleExperienceClassic: <https://github.com/pepordev/ConsoleExperienceClassic>
 
 TurtleController and ShaguController target interface `11200`, so they are more
 useful API/layout references than modern ConsolePort. Their code must still be
 audited before reuse; compatibility alone does not guarantee safe binding or UI
 behavior.
+
+ConsoleExperienceClassic also targets Vanilla `1.12.1`. Its documented setup
+uses Steam Input to translate a physical controller into keyboard and mouse
+signals. WOW Controller follows that compatibility principle for movement, but
+does not copy its source and does not persistently overwrite the player's WoW
+binding set.

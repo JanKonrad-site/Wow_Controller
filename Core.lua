@@ -1,8 +1,8 @@
--- WOW Controller 0.5.0
+-- WOW Controller 0.6.0
 -- Controller-first interface for OctoWoW / World of Warcraft 1.12.x.
 
 OctoPort = OctoPort or {}
-OctoPort.version = "0.5.0"
+OctoPort.version = "0.6.0"
 
 BINDING_HEADER_OCTOPORT = "WOW Controller"
 BINDING_NAME_OCTOPORT_TOGGLEBAGS = "Open / close all bags"
@@ -21,6 +21,10 @@ BINDING_NAME_OCTOPORT_LAYER_LT = "Controller LT action layer"
 BINDING_NAME_OCTOPORT_OPENCONFIG = "Open WOW Controller settings"
 BINDING_NAME_OCTOPORT_REAR_M1 = "ROG Ally rear paddle M1"
 BINDING_NAME_OCTOPORT_REAR_M2 = "ROG Ally rear paddle M2"
+BINDING_NAME_OCTOPORT_MOVE_FORWARD = "Left stick forward"
+BINDING_NAME_OCTOPORT_MOVE_BACKWARD = "Left stick backward"
+BINDING_NAME_OCTOPORT_MOVE_LEFT = "Left stick strafe left"
+BINDING_NAME_OCTOPORT_MOVE_RIGHT = "Left stick strafe right"
 
 local defaultRadialSlots = {
   "map",
@@ -47,6 +51,7 @@ local defaults = {
   firstRunSeen = false,
   bindingBackup = nil,
   controllerKeys = {},
+  movementBindingVersion = 0,
   autoTarget = false,
   autoAcceptQuests = false,
   radialHold = 0.35,
@@ -88,6 +93,8 @@ function OctoPort:InitializeConfig()
   local previousSafetyVersion = tonumber(OctoPortConfig.safetyVersion) or 0
   CopyDefaults(OctoPortConfig, defaults)
   self.config = OctoPortConfig
+  if self.EnsureMovementDefaults then self:EnsureMovementDefaults() end
+  if self.RefreshSetupState then self:RefreshSetupState() end
   self.needsSafetyMigration = hadExistingConfig and previousSafetyVersion < defaults.safetyVersion
   if self.needsSafetyMigration then
     -- Versions through 0.4.0 saved custom commands permanently and modified
@@ -255,7 +262,7 @@ events:SetScript("OnEvent", function()
       OctoPort.config.firstRunSeen = true
       OctoPort:Print("Unsafe bindings from an older version were removed. The addon is OFF until you enable it again.")
       OctoPort:ShowConfigTab(1, true)
-    elseif (OctoPort.config.bindingVersion or 0) < 5 and OctoPort.ShowConfigTab then
+    elseif (OctoPort.config.bindingVersion or 0) < 6 and OctoPort.ShowConfigTab then
       OctoPort.config.firstRunSeen = true
       OctoPort:ShowConfigTab(1, true)
     elseif not OctoPort.config.firstRunSeen and OctoPort.ToggleConfig then
