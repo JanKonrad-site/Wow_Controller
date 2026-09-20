@@ -43,9 +43,11 @@ function IsControlKeyDown() return false end
 function IsAltKeyDown() return false end
 
 OctoPort = {
-  version = "0.7.1",
+  version = "0.7.2",
   config = {
     enabled = false,
+    arrowMovementFallback = false,
+    arrowInputMode = "movement",
     controllerKeys = { LSUP = "W", RB = "BUTTON1" },
     nativeModifiers = { SHIFT = "shift", CTRL = "ctrl" },
   },
@@ -66,12 +68,31 @@ function OctoPort:SetQuickMenuKey(key)
   return true
 end
 
+function OctoPort:SetQuickModeKey(key)
+  self.testModeKey = key
+  return true
+end
+
+function OctoPort:ToggleArrowInputMode()
+  self.config.arrowInputMode = self.config.arrowInputMode == "target" and "movement" or "target"
+  self:UpdateArrowModeButton()
+  return true
+end
+
 dofile("Menu.lua")
 dofile("UI.lua")
 
 OctoPort:CreateMinimapButton()
 assert(OctoPort.minimapButton and OctoPort.minimapButton.visible, "minimap button was not created")
 assert(OctoPort.minimapButton.scripts.OnClick, "minimap button is not clickable")
+assert(OctoPort.arrowModeButton and not OctoPort.arrowModeButton.visible, "shared-arrow mode button should start hidden")
+
+OctoPort.config.enabled = true
+OctoPort.config.arrowMovementFallback = true
+OctoPort:UpdateArrowModeButton()
+assert(OctoPort.arrowModeButton.visible and OctoPort.arrowModeButton.label.text == "CHOD", "movement mode indicator was not shown")
+OctoPort.arrowModeButton.scripts.OnClick()
+assert(OctoPort.config.arrowInputMode == "target" and OctoPort.arrowModeButton.label.text == "CIL", "mode button did not switch to targeting")
 
 arg1 = "LeftButton"
 OctoPort.minimapButton.scripts.OnClick()
@@ -92,6 +113,12 @@ assert(OctoPort.rawTestFrame.visible, "Escape incorrectly closed raw testing")
 assert(string.find(OctoPort.rawTestFrame.last.text, "ESCAPE", 1, true), "Escape was not shown as raw input")
 OctoPort.rawTestFrame.menuButton.scripts.OnClick()
 assert(OctoPort.testMenuKey == "ESCAPE", "last working input could not be assigned to menu")
+
+OctoPort.rawTestFrame:Show()
+arg1 = "F3"
+OctoPort.rawTestFrame.scripts.OnKeyDown()
+OctoPort.rawTestFrame.modeButton.scripts.OnClick()
+assert(OctoPort.testModeKey == "F3", "last working input could not be assigned to the movement/target switch")
 
 OctoPort.rawTestFrame:Show()
 arg1 = "LeftButton"

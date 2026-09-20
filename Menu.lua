@@ -229,8 +229,10 @@ end
 function OctoPort:StopBindingCapture(completed)
   if completed then
     self.config.arrowMovementFallback = false
+    self.config.arrowInputMode = "movement"
     self.config.menuOnlyMode = false
     if self.config.enabled and self.ActivateSessionBindings then self:ActivateSessionBindings() end
+    if self.UpdateArrowModeButton then self:UpdateArrowModeButton() end
   end
   self.bindingCaptureActive = false
   self.captureDefinition = nil
@@ -320,7 +322,8 @@ function OctoPort:RefreshBindingMenu()
       local current = self:GetBindingDefinition(collision.current)
       self.setupStatus:SetText("|cffff6655KOLIZE " .. collision.key .. ": " .. (previous and previous.label or collision.previous) .. " / " .. (current and current.label or collision.current) .. "|r")
     elseif self.config.arrowMovementFallback then
-      self.setupStatus:SetText("|cffffb83dNOUZOVY POHYB: SIPKY, D-PAD TARGETING VYPNUT|r")
+      local mode = self.config.arrowInputMode == "target" and "CIL" or "CHOD"
+      self.setupStatus:SetText("|cffffb83dSDILENE SIPKY: REZIM " .. mode .. " (PREPINAC U MINIMAPY)|r")
     elseif self.config.menuOnlyMode then
       self.setupStatus:SetText("|cffffb83dAKTIVNI JE JEN TLACITKO PRO MENU|r")
     else
@@ -419,7 +422,7 @@ function OctoPort:CreateRawInputTest()
   history:SetPoint("TOPLEFT", historyTitle, "BOTTOMLEFT", 0, -8)
   history:SetJustifyH("LEFT")
 
-  local useForMenu = MakeButton(frame, "POSLEDNI VSTUP = MENU", 190, function()
+  local useForMenu = MakeButton(frame, "VSTUP = MENU", 150, function()
     if not OctoPort.lastRawInputKey then
       OctoPort.rawTestFrame.warning:SetText("Nejprve stiskni jedno funkcni fyzicke tlacitko.")
       return
@@ -428,10 +431,21 @@ function OctoPort:CreateRawInputTest()
       OctoPort.rawTestFrame:Hide()
     end
   end)
-  useForMenu:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 92, 28)
+  useForMenu:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 36, 28)
 
-  local close = MakeButton(frame, "ZAVRIT TEST", 150, function() OctoPort.rawTestFrame:Hide() end)
-  close:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -92, 28)
+  local useForMode = MakeButton(frame, "VSTUP = CHOD/CIL", 180, function()
+    if not OctoPort.lastRawInputKey then
+      OctoPort.rawTestFrame.warning:SetText("Nejprve stiskni jedno funkcni fyzicke tlacitko.")
+      return
+    end
+    if OctoPort:SetQuickModeKey(OctoPort.lastRawInputKey) then
+      OctoPort.rawTestFrame:Hide()
+    end
+  end)
+  useForMode:SetPoint("LEFT", useForMenu, "RIGHT", 14, 0)
+
+  local close = MakeButton(frame, "ZAVRIT", 130, function() OctoPort.rawTestFrame:Hide() end)
+  close:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -36, 28)
 
   frame:SetScript("OnKeyDown", function()
     OctoPort:RecordRawInput(arg1)
@@ -455,6 +469,7 @@ function OctoPort:CreateRawInputTest()
   frame.warning = warning
   frame.history = history
   frame.menuButton = useForMenu
+  frame.modeButton = useForMode
   self.rawTestFrame = frame
 end
 
@@ -499,7 +514,7 @@ function OctoPort:UpdateInputDiagnostics()
       row:SetBackdropBorderColor(0.78, 0.52, 0.18, 0.90)
       row.state:SetText("SYSTEM")
       row.state:SetTextColor(1.00, 0.68, 0.25)
-    elseif (row.nativeMovement or row.nativeAction) and self:GetControllerBindingKey(row.id) then
+    elseif (row.nativeMovement or row.nativeAction or (self.config.nativeFaceButtons and (row.id == "A" or row.id == "B" or row.id == "X" or row.id == "Y"))) and self:GetControllerBindingKey(row.id) then
       row:SetBackdropColor(0.04, 0.18, 0.34, 0.98)
       row:SetBackdropBorderColor(0.28, 0.62, 1.00, 1)
       row.state:SetText("NATIVE")
@@ -578,6 +593,12 @@ local function BuildSetupPanel(panel)
   end))
   restore:SetPoint("LEFT", preset, "RIGHT", 10, 0)
 
+  local nativeFace = AddFocusable(panel, MakeButton(panel, "ABXY = 1 2 3 4", 160, function()
+    OctoPort:ApplyNativeFaceButtons()
+    OctoPort:RefreshBindingMenu()
+  end))
+  nativeFace:SetPoint("LEFT", restore, "RIGHT", 10, 0)
+
   local enable = AddFocusable(panel, MakeButton(panel, "ZAPNOUT BEZPECNE", 310, function()
     OctoPort:SetEnabled(not OctoPort.config.enabled)
     this:SetText(OctoPort.config.enabled and "VYPNOUT A OBNOVIT BINDY" or "ZAPNOUT BEZPECNE")
@@ -591,7 +612,7 @@ local function BuildSetupPanel(panel)
   arrowFallback:SetPoint("LEFT", enable, "RIGHT", 10, 0)
 
   local note = MakeLabel(panel, "GameFontDisableSmall",
-    "V Armoury Crate nastav CONTROL MODE = DESKTOP. Idealne leva packa W/A/S/D a D-pad ctyri odlisne klavesy. Pokud packa zatim vysila sipky, CHUZE ZE SIPEK ji zprovozni za cenu vypnuteho D-pad targetingu. M1/M2 musi byt samostatna tlacitka.", 470)
+    "V Armoury Crate nastav CONTROL MODE = DESKTOP. Pokud packa i D-pad vysilaji stejne sipky, CHUZE ZE SIPEK aktivuje prepinac CHOD/CIL u minimapy. ABXY = 1 2 3 4 pouzije nativni Blizzard akce; Armoury Crate ale musi z tlacitek opravdu vysilat klavesy 1-4. M1/M2 musi byt samostatna tlacitka, ne Secondary Function.", 470)
   note:SetPoint("TOPLEFT", enable, "BOTTOMLEFT", 0, -18)
   note:SetJustifyH("LEFT")
 

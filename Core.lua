@@ -1,8 +1,8 @@
--- WOW Controller 0.7.1
+-- WOW Controller 0.7.2
 -- Controller-first interface for OctoWoW / World of Warcraft 1.12.x.
 
 OctoPort = OctoPort or {}
-OctoPort.version = "0.7.1"
+OctoPort.version = "0.7.2"
 
 BINDING_HEADER_OCTOPORT = "WOW Controller"
 BINDING_NAME_OCTOPORT_TOGGLEBAGS = "Open / close all bags"
@@ -19,6 +19,7 @@ BINDING_NAME_OCTOPORT_TARGET_RIGHT = "Next enemy target"
 BINDING_NAME_OCTOPORT_LAYER_LB = "Controller LB action layer"
 BINDING_NAME_OCTOPORT_LAYER_LT = "Controller LT action layer"
 BINDING_NAME_OCTOPORT_OPENCONFIG = "Open WOW Controller settings"
+BINDING_NAME_OCTOPORT_TOGGLEMODE = "Switch shared arrows between move and target"
 BINDING_NAME_OCTOPORT_REAR_M1 = "ROG Ally rear paddle M1"
 BINDING_NAME_OCTOPORT_REAR_M2 = "ROG Ally rear paddle M2"
 
@@ -49,7 +50,9 @@ local defaults = {
   controllerKeys = {},
   movementBindingVersion = 0,
   arrowMovementFallback = false,
+  arrowInputMode = "movement",
   menuOnlyMode = false,
+  nativeFaceButtons = false,
   autoTarget = false,
   autoAcceptQuests = false,
   radialHold = 0.35,
@@ -109,6 +112,7 @@ function OctoPort:ShowCommands()
   self:Print("/octoport setup - start the controller binding wizard")
   self:Print("/octoport test - open the raw keyboard/mouse input test")
   self:Print("/octoport arrows - emergency movement when the stick emits arrow keys")
+  self:Print("/octoport mode - switch shared arrows between walking and targeting")
   self:Print("/octoport preset - apply safe session-only ROG Ally keys")
   self:Print("/octoport restore - disable addon and restore original bindings")
   self:Print("/octoport edit - show all three action layers")
@@ -171,6 +175,8 @@ function OctoPort:HandleSlash(message)
     if self.StartRawInputTest then self:StartRawInputTest() end
   elseif message == "arrows" then
     if self.ApplyArrowMovementFallback then self:ApplyArrowMovementFallback() end
+  elseif message == "mode" then
+    if self.ToggleArrowInputMode then self:ToggleArrowInputMode() end
   elseif message == "preset" then
     self:ApplyRecommendedBindings()
   elseif message == "restore" then
@@ -267,7 +273,7 @@ events:SetScript("OnEvent", function()
       OctoPort.config.firstRunSeen = true
       OctoPort:Print("Unsafe bindings from an older version were removed. The addon is OFF until you enable it again.")
       OctoPort:ShowConfigTab(1, true)
-    elseif (OctoPort.config.bindingVersion or 0) < 8 and OctoPort.ShowConfigTab then
+    elseif (OctoPort.config.bindingVersion or 0) < 9 and OctoPort.ShowConfigTab then
       OctoPort.config.firstRunSeen = true
       OctoPort:ShowConfigTab(1, true)
     elseif not OctoPort.config.firstRunSeen and OctoPort.ToggleConfig then
