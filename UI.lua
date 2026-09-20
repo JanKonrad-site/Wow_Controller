@@ -4,11 +4,18 @@
 -- not replace global FrameXML functions. The HUD mirrors action-slot state in
 -- its own frames; real actions still execute only after a controller keypress.
 
-local buttonLayout = {
-  [1] = { 128, -40, "A", 0.20, 0.90, 0.25 },
-  [2] = { 168,   0, "B", 0.95, 0.20, 0.20 },
-  [3] = {  88,   0, "X", 0.20, 0.55, 1.00 },
-  [4] = { 128,  40, "Y", 1.00, 0.82, 0.15 },
+local faceLayout = {
+  { id = "A", x = 128, y = -40, glyph = "A", red = 0.20, green = 0.90, blue = 0.25 },
+  { id = "B", x = 168, y =   0, glyph = "B", red = 0.95, green = 0.20, blue = 0.20 },
+  { id = "X", x =  88, y =   0, glyph = "X", red = 0.20, green = 0.55, blue = 1.00 },
+  { id = "Y", x = 128, y =  40, glyph = "Y", red = 1.00, green = 0.82, blue = 0.15 },
+}
+
+local actionDpadLayout = {
+  { id = "DUP",    x = -128, y =  40, glyph = "^", red = 0.72, green = 0.78, blue = 0.82 },
+  { id = "DRIGHT", x =  -88, y =   0, glyph = ">", red = 0.72, green = 0.78, blue = 0.82 },
+  { id = "DDOWN",  x = -128, y = -40, glyph = "v", red = 0.72, green = 0.78, blue = 0.82 },
+  { id = "DLEFT",  x = -168, y =   0, glyph = "<", red = 0.72, green = 0.78, blue = 0.82 },
 }
 
 local targetLayout = {
@@ -19,10 +26,19 @@ local targetLayout = {
 }
 
 local layerDefinitions = {
-  base  = { title = "ZAKLAD" },
-  shift = { title = "LB" },
-  ctrl  = { title = "LT" },
+  base = { title = "ZAKLAD", controls = faceLayout },
+  lt = { title = "LT", controls = nil },
+  rt = { title = "RT", controls = nil },
 }
+
+local layeredControls = {}
+for index = 1, table.getn(faceLayout) do table.insert(layeredControls, faceLayout[index]) end
+for index = 1, table.getn(actionDpadLayout) do table.insert(layeredControls, actionDpadLayout[index]) end
+layerDefinitions.lt.controls = layeredControls
+layerDefinitions.rt.controls = layeredControls
+
+local actionIndices = { A = 1, B = 2, X = 3, Y = 4, DUP = 5, DRIGHT = 6, DDOWN = 7, DLEFT = 8 }
+local faceByNumber = { "A", "B", "X", "Y" }
 
 local function MakeText(parent, template, text)
   local label = parent:CreateFontString(nil, "OVERLAY", template)
@@ -43,13 +59,21 @@ local function MakeBackdrop(frame, borderRed, borderGreen, borderBlue)
   frame:SetBackdropBorderColor(borderRed or 0.50, borderGreen or 0.56, borderBlue or 0.60, 0.92)
 end
 
-local function CreateMirrorButton(parent, slot)
-  local data = buttonLayout[slot]
-  local button = CreateFrame("Frame", nil, parent)
+local function CursorCarriesAction()
+  if CursorHasItem and CursorHasItem() then return true end
+  if CursorHasSpell and CursorHasSpell() then return true end
+  if CursorHasMacro and CursorHasMacro() then return true end
+  return false
+end
+
+local function CreateMirrorButton(parent, data)
+  local button = CreateFrame("Button", nil, parent)
   button:SetWidth(42)
   button:SetHeight(42)
-  button:SetPoint("CENTER", parent, "CENTER", data[1], data[2])
-  MakeBackdrop(button, data[4], data[5], data[6])
+  button:SetPoint("CENTER", parent, "CENTER", data.x, data.y)
+  button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
+  button:RegisterForDrag("LeftButton")
+  MakeBackdrop(button, data.red, data.green, data.blue)
 
   local icon = button:CreateTexture(nil, "ARTWORK")
   icon:SetPoint("TOPLEFT", button, "TOPLEFT", 5, -5)
@@ -61,9 +85,9 @@ local function CreateMirrorButton(parent, slot)
   shade:SetTexture("Interface\\Buttons\\WHITE8X8")
   shade:SetVertexColor(0, 0, 0, 0)
 
-  local glyph = MakeText(button, "GameFontNormalSmall", data[3])
+  local glyph = MakeText(button, "GameFontNormalSmall", data.glyph)
   glyph:SetPoint("TOPRIGHT", button, "TOPRIGHT", 3, 4)
-  glyph:SetTextColor(data[4], data[5], data[6])
+  glyph:SetTextColor(data.red, data.green, data.blue)
 
   local count = MakeText(button, "NumberFontNormalSmall", "")
   count:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", -3, 3)
@@ -72,7 +96,28 @@ local function CreateMirrorButton(parent, slot)
   button.shade = shade
   button.glyph = glyph
   button.count = count
-  button.slot = slot
+  button.control = data.id
+  button:SetScript("OnEnter", function()
+    if not OctoPort.config or not OctoPort.config.editMode or not this.action then return end
+    GameTooltip:SetOwner(this, "ANCHOR_RIGHT")
+    if GameTooltip.SetAction then GameTooltip:SetAction(this.action) else GameTooltip:SetText("Action " .. this.action) end
+    GameTooltip:Show()
+  end)
+  button:SetScript("OnLeave", function() GameTooltip:Hide() end)
+  button:SetScript("OnDragStart", function()
+    if OctoPort.config and OctoPort.config.editMode and this.action and PickupAction then PickupAction(this.action) end
+  end)
+  button:SetScript("OnReceiveDrag", function()
+    if OctoPort.config and OctoPort.config.editMode and this.action and PlaceAction then PlaceAction(this.action) end
+  end)
+  button:SetScript("OnClick", function()
+    if not OctoPort.config or not OctoPort.config.editMode or not this.action then return end
+    if arg1 == "RightButton" or not CursorCarriesAction() then
+      if PickupAction then PickupAction(this.action) end
+    elseif PlaceAction then
+      PlaceAction(this.action)
+    end
+  end)
   return button
 end
 
@@ -124,9 +169,13 @@ local function GetBaseActionSlot(slot)
 end
 
 function OctoPort:GetActionSlot(layerName, slot)
-  if layerName == "shift" then return 60 + slot end
-  if layerName == "ctrl" then return 48 + slot end
-  return GetBaseActionSlot(slot)
+  local control = type(slot) == "number" and faceByNumber[slot] or slot
+  local index = actionIndices[control]
+  if not index then return nil end
+  if layerName == "lt" then return 60 + index end
+  if layerName == "rt" then return 48 + index end
+  if index > 4 then return nil end
+  return GetBaseActionSlot(index)
 end
 
 function OctoPort:CreateRoot()
@@ -134,8 +183,8 @@ function OctoPort:CreateRoot()
 
   self.layers = {}
   local root = CreateFrame("Frame", "OctoPortHUD", UIParent)
-  root:SetWidth(400)
-  root:SetHeight(150)
+  root:SetWidth(430)
+  root:SetHeight(158)
   root:SetFrameStrata("MEDIUM")
   root:SetClampedToScreen(true)
   root:SetMovable(true)
@@ -174,7 +223,7 @@ function OctoPort:CreateRoot()
   local active = MakeText(root, "GameFontHighlightSmall", "ZAKLAD")
   active:SetPoint("TOP", title, "BOTTOM", 0, -2)
 
-  local hint = MakeText(root, "GameFontDisableSmall", "D-PAD = CILE   A = POTVRDIT   DRZ MENU = KOLO")
+  local hint = MakeText(root, "GameFontDisableSmall", "D-PAD = CILE   LT/RT = 8 AKCI   MENU = KOLO")
   hint:SetPoint("BOTTOM", root, "BOTTOM", 0, 7)
 
   local settings = CreateFrame("Button", nil, root, "UIPanelButtonTemplate")
@@ -193,13 +242,18 @@ function OctoPort:CreateRoot()
 
   for key, definition in pairs(layerDefinitions) do
     local layer = CreateFrame("Frame", "OctoPortLayer_" .. key, root)
-    layer:SetWidth(390)
+    layer:SetWidth(420)
     layer:SetHeight(100)
     layer:SetPoint("CENTER", root, "CENTER", 0, 0)
     layer.buttons = {}
-    for slot = 1, 4 do
-      layer.buttons[slot] = CreateMirrorButton(layer, slot)
+    for index = 1, table.getn(definition.controls) do
+      local control = definition.controls[index]
+      layer.buttons[control.id] = CreateMirrorButton(layer, control)
     end
+    local layerTitle = MakeText(layer, "GameFontNormalSmall", definition.title)
+    layerTitle:SetPoint("TOP", layer, "TOP", 0, 4)
+    layerTitle:SetTextColor(0.24, 0.84, 0.81)
+    layer.titleText = layerTitle
     self.layers[key] = layer
   end
 
@@ -208,7 +262,7 @@ function OctoPort:CreateRoot()
   self.activeLayerText = active
   self.hintText = hint
   self.targetNameText = targetName
-  self.targetPad = CreateTargetPad(root)
+  self.targetPad = CreateTargetPad(self.layers.base)
   self.settingsButton = settings
 
   root:SetScript("OnUpdate", function()
@@ -223,11 +277,11 @@ end
 
 function OctoPort:GetActiveLayer()
   if self.controllerLayerState then
-    if self.controllerLayerState.ctrl then return "ctrl" end
-    if self.controllerLayerState.shift then return "shift" end
+    if self.controllerLayerState.rt then return "rt" end
+    if self.controllerLayerState.lt then return "lt" end
   end
 
-  local mapping = self.config and self.config.nativeModifiers or { SHIFT = "shift", CTRL = "ctrl" }
+  local mapping = self.config and self.config.nativeModifiers or { SHIFT = "lt", CTRL = "rt" }
   if IsControlKeyDown and IsControlKeyDown() and mapping.CTRL then return mapping.CTRL end
   if IsShiftKeyDown and IsShiftKeyDown() and mapping.SHIFT then return mapping.SHIFT end
   if IsAltKeyDown and IsAltKeyDown() and mapping.ALT then return mapping.ALT end
@@ -237,9 +291,8 @@ end
 function OctoPort:UpdateActionMirrors()
   if not self.layers or not self.config or not self.config.enabled then return end
   for layerName, layer in pairs(self.layers) do
-    for slot = 1, 4 do
-      local button = layer.buttons[slot]
-      local action = self:GetActionSlot(layerName, slot)
+    for control, button in pairs(layer.buttons) do
+      local action = self:GetActionSlot(layerName, control)
       button.action = action
       local texture = GetActionTexture(action)
       if texture then
@@ -264,43 +317,12 @@ function OctoPort:UpdateActionMirrors()
   end
 end
 
-function OctoPort:PrepareAutomaticTarget()
-  if not self.config or not self.config.enabled or not self.config.autoTarget then return end
-  if UnitExists("target") and not UnitIsDead("target") then return end
-  TargetNearestEnemy()
-end
-
 function OctoPort:HandleControllerAction(slot, keystate)
-  self.controllerPressed = self.controllerPressed or {}
-  self.contextConsumed = self.contextConsumed or {}
-
   if self.HandleConfigAction and self:HandleConfigAction(slot, keystate) then return end
-
-  if keystate == "down" then
-    if self.HandleContextButton and self:HandleContextButton(slot) then
-      self.contextConsumed[slot] = true
-      return
-    end
-    local layerName = self:GetActiveLayer()
-    local action = self:GetActionSlot(layerName, slot)
-    local button = self.layers and self.layers[layerName] and self.layers[layerName].buttons[slot]
-    self.controllerPressed[slot] = { button = button, action = action }
-    if button then button:SetBackdropColor(0.04, 0.28, 0.30, 0.98) end
-    return
-  end
-
-  if self.contextConsumed[slot] then
-    self.contextConsumed[slot] = nil
-    return
-  end
-
-  local pressed = self.controllerPressed[slot]
-  self.controllerPressed[slot] = nil
-  if not pressed or not pressed.action then return end
-  if pressed.button then pressed.button:SetBackdropColor(0.025, 0.04, 0.055, 0.94) end
-  if not HasAction(pressed.action) then return end
-  self:PrepareAutomaticTarget()
-  UseAction(pressed.action, 0)
+  if keystate == "down" and self.HandleContextButton then self:HandleContextButton(slot) end
+  -- Combat actions never execute here. Session activation binds every action
+  -- directly to Blizzard's native ACTIONBUTTON/MULTIACTIONBAR commands. This
+  -- legacy handler remains only so ABXY can navigate our settings panel.
 end
 
 function OctoPort:TargetChanged(direction)
@@ -346,16 +368,16 @@ function OctoPort:UpdateLayer(force)
   self.lastEditMode = self.config.editMode
 
   if self.config.editMode then
-    local positions = { base = 100, shift = 10, ctrl = -80 }
+    local positions = { base = 135, lt = 5, rt = -125 }
     for key, layer in pairs(self.layers) do
       layer:ClearAllPoints()
       layer:SetPoint("CENTER", self.root, "CENTER", 0, positions[key])
       layer:SetAlpha(key == active and 1 or 0.72)
       layer:Show()
     end
-    self.root:SetHeight(340)
-    self.activeLayerText:SetText("NAHLED TRI VRSTEV")
-    self.hintText:SetText("Schopnosti upravuj na puvodnich Blizzard listach")
+    self.root:SetHeight(430)
+    self.activeLayerText:SetText("20 EDITOVATELNYCH AKCI")
+    self.hintText:SetText("Pretahni schopnost na slot; pravym klikem slot zvedni")
   else
     for key, layer in pairs(self.layers) do
       layer:ClearAllPoints()
@@ -363,9 +385,9 @@ function OctoPort:UpdateLayer(force)
       layer:SetAlpha(1)
       if key == active then layer:Show() else layer:Hide() end
     end
-    self.root:SetHeight(150)
+    self.root:SetHeight(158)
     self.activeLayerText:SetText(layerDefinitions[active].title)
-    self.hintText:SetText("D-PAD = CILE   A = POTVRDIT   DRZ MENU = KOLO")
+    self.hintText:SetText("D-PAD = CILE   LT/RT = 8 AKCI   MENU = KOLO")
   end
 end
 
@@ -374,7 +396,7 @@ function OctoPort:ApplyLayout()
   self.root:SetScale(self.config.scale or 1)
   self.root:ClearAllPoints()
   local y = self.config.y or 122
-  if self.config.editMode and y < 170 then y = 170 end
+  if self.config.editMode and y < 220 then y = 220 end
   self.root:SetPoint("CENTER", UIParent, "BOTTOM", self.config.x or 0, y)
   self:SetMoveMode(self.config.moveMode)
 end

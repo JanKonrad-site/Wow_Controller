@@ -36,8 +36,11 @@ jobs:
           grep -q 'command = "MOVEFORWARD"' Bindings.lua
           grep -q 'function OctoPort:CreateMinimapButton' UI.lua
           grep -q 'function OctoPort:StartRawInputTest' Menu.lua
+          grep -q 'MULTIACTIONBAR1BUTTON8' Bindings.lua
+          grep -q 'MULTIACTIONBAR2BUTTON8' Bindings.lua
           ! grep -q 'OCTOPORT_MOVE_' Bindings.xml
           ! grep -REn '(MoveForward|MoveBackward|StrafeLeft|StrafeRight)(Start|Stop)\(' --include='*.lua' .
+          ! grep -REn '(UseAction|TurnOrActionStart|TurnOrActionStop|Jump|ToggleAutoRun)\(' --include='*.lua' Bindings.lua UI.lua
 
       - name: Check OctoLauncher layout
         run: |

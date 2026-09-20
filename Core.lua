@@ -1,8 +1,8 @@
--- WOW Controller 0.8.0
+-- WOW Controller 0.9.0
 -- Controller-first interface for OctoWoW / World of Warcraft 1.12.x.
 
 OctoPort = OctoPort or {}
-OctoPort.version = "0.8.0"
+OctoPort.version = "0.9.0"
 
 BINDING_HEADER_OCTOPORT = "WOW Controller"
 BINDING_NAME_OCTOPORT_TOGGLEBAGS = "Open / close all bags"
@@ -16,8 +16,8 @@ BINDING_NAME_OCTOPORT_TARGET_UP = "Previous friendly target"
 BINDING_NAME_OCTOPORT_TARGET_DOWN = "Next friendly target"
 BINDING_NAME_OCTOPORT_TARGET_LEFT = "Previous enemy target"
 BINDING_NAME_OCTOPORT_TARGET_RIGHT = "Next enemy target"
-BINDING_NAME_OCTOPORT_LAYER_LB = "Controller LB action layer"
 BINDING_NAME_OCTOPORT_LAYER_LT = "Controller LT action layer"
+BINDING_NAME_OCTOPORT_LAYER_RT = "Controller RT action layer"
 BINDING_NAME_OCTOPORT_OPENCONFIG = "Open WOW Controller settings"
 BINDING_NAME_OCTOPORT_REAR_M1 = "ROG Ally rear paddle M1"
 BINDING_NAME_OCTOPORT_REAR_M2 = "ROG Ally rear paddle M2"
@@ -56,7 +56,7 @@ local defaults = {
   radialHold = 0.35,
   radialSlots = defaultRadialSlots,
   mountName = "",
-  nativeModifiers = { SHIFT = "shift", CTRL = "ctrl" },
+  nativeModifiers = { SHIFT = "lt", CTRL = "rt" },
   selectedConfigTab = 1,
   reticleEnabled = false,
   reticleScale = 1.00,
@@ -112,12 +112,11 @@ function OctoPort:ShowCommands()
   self:Print("/octoport test - open the raw keyboard/mouse input test")
   self:Print("/octoport preset - apply safe session-only ROG Ally keys")
   self:Print("/octoport restore - disable addon and restore original bindings")
-  self:Print("/octoport edit - show all three action layers")
+  self:Print("/octoport edit - show and edit all 20 action slots")
   self:Print("/octoport move - unlock or lock the controller HUD")
   self:Print("/octoport scale 0.7-1.6 - resize the HUD")
   self:Print("/octoport reset - reset HUD position and size")
   self:Print("/octoport wheel - edit the radial menu")
-  self:Print("/octoport target on | off - automatic enemy target for empty target")
   self:Print("/octoport quest on | off - automatic quest acceptance")
   self:Print("/octoport mount NAME - preferred mount item or spell")
   self:Print("/octoport on | off - enable or hide the HUD")
@@ -137,7 +136,13 @@ function OctoPort:SetEnabled(enabled)
   self.config.menuOnlyMode = false
   self.config.enabled = enabled and true or false
   if self.config.enabled then
-    if self.ActivateSessionBindings then self:ActivateSessionBindings() end
+    if self.ActivateSessionBindings and not self:ActivateSessionBindings() then
+      self.config.enabled = false
+      if self.SetUIEnabled then self:SetUIEnabled(false) end
+      self:Print("Controller stayed OFF because stick and D-pad calibration is incomplete or conflicting.")
+      if self.ShowConfigTab then self:ShowConfigTab(1, true) end
+      return false
+    end
   elseif self.DeactivateSessionBindings then
     self:DeactivateSessionBindings()
   end
@@ -146,7 +151,11 @@ function OctoPort:SetEnabled(enabled)
   elseif self.root then
     if self.config.enabled then self.root:Show() else self.root:Hide() end
   end
+  if self.config.enabled and self.configFrame and self.configFrame:IsVisible() and self.ActivateConfigNavigationBindings then
+    self:ActivateConfigNavigationBindings()
+  end
   self:Print(self.config.enabled and "Safe controller session enabled." or "Controller disabled; original bindings restored.")
+  return true
 end
 
 local function Trim(text)
@@ -198,14 +207,14 @@ function OctoPort:HandleSlash(message)
     if self.RefreshRadial then self:RefreshRadial() end
     self:Print("Radial menu reset to defaults.")
   elseif message == "target on" or message == "autotarget on" then
-    self.config.autoTarget = true
-    self:Print("Automatic enemy targeting enabled.")
+    self.config.autoTarget = false
+    self:Print("Automatic combat targeting is disabled for safety. Use D-pad Right for the next enemy.")
   elseif message == "target off" or message == "autotarget off" then
     self.config.autoTarget = false
-    self:Print("Automatic enemy targeting disabled.")
+    self:Print("Automatic combat targeting is already disabled.")
   elseif message == "quest on" then
     self.config.autoAcceptQuests = true
-    self:Print("Automatic quest acceptance enabled. Hold LB while opening a quest to inspect it first.")
+    self:Print("Automatic quest acceptance enabled. Hold LT while opening a quest to inspect it first.")
   elseif message == "quest off" then
     self.config.autoAcceptQuests = false
     self:Print("Automatic quest acceptance disabled.")
@@ -259,9 +268,9 @@ events:SetScript("OnEvent", function()
       OctoPort:ShowConfigTab(1, true)
     elseif OctoPort.controlsProfileUpgraded and OctoPort.ShowConfigTab then
       OctoPort.config.firstRunSeen = true
-      OctoPort:Print("Direct controls enabled: stick W/A/S/D, D-pad targeting, ABXY action slots 1-4. Verify physical signals in RAW TEST.")
+      OctoPort:Print("Universal 20-action controls enabled: separate stick/D-pad, LT and RT layers. Verify all eight directions in RAW TEST.")
       OctoPort:ShowConfigTab(1, true)
-    elseif (OctoPort.config.bindingVersion or 0) < 10 and OctoPort.ShowConfigTab then
+    elseif (OctoPort.config.bindingVersion or 0) < 11 and OctoPort.ShowConfigTab then
       OctoPort.config.firstRunSeen = true
       OctoPort:ShowConfigTab(1, true)
     elseif not OctoPort.config.firstRunSeen and OctoPort.ToggleConfig then

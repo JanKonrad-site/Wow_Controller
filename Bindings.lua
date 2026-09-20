@@ -14,17 +14,20 @@ local bindingDefinitions = {
   { id = "B",      label = "B / Action 2", command = "OCTOPORT_ACTION_B",    defaultKey = "2",     required = true, nativeAction = true },
   { id = "X",      label = "X / Action 3", command = "OCTOPORT_ACTION_X",    defaultKey = "3",     required = true, nativeAction = true },
   { id = "Y",      label = "Y / Action 4", command = "OCTOPORT_ACTION_Y",    defaultKey = "4",     required = true, nativeAction = true },
-  { id = "DUP",    label = "D-Pad Up",    command = "OCTOPORT_TARGET_UP",    defaultKey = "UP",    required = true },
-  { id = "DDOWN",  label = "D-Pad Down",  command = "OCTOPORT_TARGET_DOWN",  defaultKey = "DOWN",  required = true },
-  { id = "DLEFT",  label = "D-Pad Left",  command = "OCTOPORT_TARGET_LEFT",  defaultKey = "LEFT",  required = true },
-  { id = "DRIGHT", label = "D-Pad Right", command = "OCTOPORT_TARGET_RIGHT", defaultKey = "RIGHT", required = true },
+  { id = "DUP",    label = "D-Pad Up",    command = "OCTOPORT_TARGET_UP",    nativeTarget = "TARGETPREVIOUSFRIEND", defaultKey = "UP",    required = true },
+  { id = "DDOWN",  label = "D-Pad Down",  command = "OCTOPORT_TARGET_DOWN",  nativeTarget = "TARGETNEARESTFRIEND",  defaultKey = "DOWN",  required = true },
+  { id = "DLEFT",  label = "D-Pad Left",  command = "OCTOPORT_TARGET_LEFT",  nativeTarget = "TARGETPREVIOUSENEMY",  defaultKey = "LEFT",  required = true },
+  { id = "DRIGHT", label = "D-Pad Right", command = "OCTOPORT_TARGET_RIGHT", nativeTarget = "TARGETNEARESTENEMY",   defaultKey = "RIGHT", required = true },
   { id = "MENU",   label = "Menu",        command = "OCTOPORT_RADIAL",       defaultKey = "F8",    required = true },
-  { id = "LB",     label = "LB layer",    command = "OCTOPORT_LAYER_LB",     nativeKey = "SHIFT", layer = "shift" },
-  { id = "LT",     label = "LT layer",    command = "OCTOPORT_LAYER_LT",     nativeKey = "CTRL",  layer = "ctrl" },
-  -- RB/RT remain native mouse buttons in Armoury Crate Desktop Mode. They are
-  -- recorded for the tester, but deliberately never rebound by the addon.
-  { id = "RB",     label = "RB / Left Click",  defaultKey = "BUTTON1", passthrough = true },
-  { id = "RT",     label = "RT / Right Click", defaultKey = "BUTTON2", passthrough = true },
+  -- Vanilla has no gamepad API. LT and RT therefore have to emit real keyboard
+  -- modifiers so Blizzard can execute every combat action as a native binding.
+  { id = "LT",     label = "LT / Action layer", command = "OCTOPORT_LAYER_LT", nativeKey = "SHIFT", layer = "lt", required = true },
+  { id = "RT",     label = "RT / Action layer", command = "OCTOPORT_LAYER_RT", nativeKey = "CTRL",  layer = "rt", required = true },
+  -- Mouse clicks stay device-side. A WoW 1.12 addon cannot safely synthesize a
+  -- secure UI click from an arbitrary key, but it can display and test the real
+  -- mouse buttons emitted by Armoury Crate or Steam Input.
+  { id = "LB",     label = "LB / Mouse Left",  defaultKey = "BUTTON1", passthrough = true },
+  { id = "RB",     label = "RB / Mouse Right", defaultKey = "BUTTON2", passthrough = true },
   -- Stick clicks use Blizzard's own binding commands, just like movement.
   { id = "L3",     label = "L3 / Auto Run", command = "TOGGLEAUTORUN", defaultKey = "NUMLOCK", nativeAction = true },
   { id = "R3",     label = "R3 / Jump",     command = "JUMP",          defaultKey = "SPACE",   nativeAction = true },
@@ -51,6 +54,7 @@ local legacyCommands = {
   "OCTOPORT_TARGET_RIGHT",
   "OCTOPORT_LAYER_LB",
   "OCTOPORT_LAYER_LT",
+  "OCTOPORT_LAYER_RT",
   "OCTOPORT_OPENCONFIG",
   "OCTOPORT_TOGGLEMODE",
   "OCTOPORT_REAR_M1",
@@ -71,6 +75,15 @@ local rearActionLabels = {
   map = "Map",
   target = "Next enemy",
   radial = "Radial wheel",
+}
+
+local rearNativeCommands = {
+  interact = "TURNORACTION",
+  jump = "JUMP",
+  autorun = "TOGGLEAUTORUN",
+  bags = "OPENALLBAGS",
+  map = "TOGGLEWORLDMAP",
+  target = "TARGETNEARESTENEMY",
 }
 
 OctoPort.rearActionOrder = rearActionOrder
@@ -100,6 +113,28 @@ local nativeFaceCommands = {
   Y = "ACTIONBUTTON4",
 }
 
+local actionControlOrder = { "A", "B", "X", "Y", "DUP", "DRIGHT", "DDOWN", "DLEFT" }
+local movementControlOrder = { "LSUP", "LSDOWN", "LSLEFT", "LSRIGHT" }
+local directionControlOrder = { "LSUP", "LSDOWN", "LSLEFT", "LSRIGHT", "DUP", "DDOWN", "DLEFT", "DRIGHT" }
+
+local layeredActionCommands = {
+  lt = {
+    A = "MULTIACTIONBAR1BUTTON1", B = "MULTIACTIONBAR1BUTTON2",
+    X = "MULTIACTIONBAR1BUTTON3", Y = "MULTIACTIONBAR1BUTTON4",
+    DUP = "MULTIACTIONBAR1BUTTON5", DRIGHT = "MULTIACTIONBAR1BUTTON6",
+    DDOWN = "MULTIACTIONBAR1BUTTON7", DLEFT = "MULTIACTIONBAR1BUTTON8",
+  },
+  rt = {
+    A = "MULTIACTIONBAR2BUTTON1", B = "MULTIACTIONBAR2BUTTON2",
+    X = "MULTIACTIONBAR2BUTTON3", Y = "MULTIACTIONBAR2BUTTON4",
+    DUP = "MULTIACTIONBAR2BUTTON5", DRIGHT = "MULTIACTIONBAR2BUTTON6",
+    DDOWN = "MULTIACTIONBAR2BUTTON7", DLEFT = "MULTIACTIONBAR2BUTTON8",
+  },
+}
+
+OctoPort.actionControlOrder = actionControlOrder
+OctoPort.layeredActionCommands = layeredActionCommands
+
 local function ClearCommand(command)
   local guard = 0
   while guard < 8 do
@@ -119,7 +154,7 @@ function OctoPort:EnsureMovementDefaults()
   if not self.config then return end
   self.config.controllerKeys = self.config.controllerKeys or {}
   local profileVersion = tonumber(self.config.movementBindingVersion) or 0
-  if profileVersion >= 2 then return end
+  if profileVersion >= 3 then return end
 
   local assigned = {}
   for id, key in pairs(self.config.controllerKeys) do
@@ -129,7 +164,7 @@ function OctoPort:EnsureMovementDefaults()
   for index = 1, table.getn(bindingDefinitions) do
     local definition = bindingDefinitions[index]
     local addDefault = profileVersion < 1 and definition.movement
-    if profileVersion < 2 and (definition.id == "RB" or definition.id == "RT" or definition.id == "L3" or definition.id == "R3") then
+    if profileVersion < 3 and (definition.id == "LB" or definition.id == "RB" or definition.id == "L3" or definition.id == "R3") then
       addDefault = true
     end
     if addDefault and not self.config.controllerKeys[definition.id] and not assigned[definition.defaultKey] then
@@ -138,12 +173,12 @@ function OctoPort:EnsureMovementDefaults()
     end
   end
 
-  self.config.movementBindingVersion = 2
+  self.config.movementBindingVersion = 3
 end
 
 function OctoPort:EnsureDirectControlDefaults()
   if not self.config then return false end
-  if (tonumber(self.config.bindingVersion) or 0) >= 10 then return false end
+  if (tonumber(self.config.bindingVersion) or 0) >= 11 then return false end
 
   self.config.controllerKeys = self.config.controllerKeys or {}
   local keys = self.config.controllerKeys
@@ -152,7 +187,15 @@ function OctoPort:EnsureDirectControlDefaults()
   -- Versions 0.7.1/0.7.2 could put both physical controls behind the same
   -- arrow signals. Version 0.8 deliberately requires separate device output:
   -- W/A/S/D for the stick and arrows for the D-pad.
-  if sharedArrows then
+  local seenDirections = {}
+  local directionsAreDistinct = true
+  for index = 1, table.getn(directionControlOrder) do
+    local id = directionControlOrder[index]
+    local key = keys[id]
+    if not key or seenDirections[key] then directionsAreDistinct = false end
+    if key then seenDirections[key] = id end
+  end
+  if sharedArrows or not directionsAreDistinct then
     keys.LSUP, keys.LSDOWN = "W", "S"
     keys.LSLEFT, keys.LSRIGHT = "A", "D"
     keys.DUP, keys.DDOWN = "UP", "DOWN"
@@ -164,6 +207,17 @@ function OctoPort:EnsureDirectControlDefaults()
   for id, key in pairs(directFaceDefaults) do
     if not keys[id] or keys[id] == oldFaceDefaults[id] then keys[id] = key end
   end
+
+  -- Migrate the old RB/RT mouse layout to the new two-trigger action model.
+  -- The two real mouse clicks move to LB/RB; LT/RT become native modifiers.
+  local oldLeftClick = keys.LB or keys.RB
+  local oldRightClick = keys.RT
+  keys.LB = oldLeftClick or "BUTTON1"
+  keys.RB = oldRightClick or "BUTTON2"
+  if keys.LB == keys.RB then keys.LB, keys.RB = "BUTTON1", "BUTTON2" end
+  keys.LT = nil
+  keys.RT = nil
+  self.config.nativeModifiers = { SHIFT = "lt", CTRL = "rt" }
 
   for index = 1, table.getn(bindingDefinitions) do
     local definition = bindingDefinitions[index]
@@ -178,6 +232,28 @@ function OctoPort:EnsureDirectControlDefaults()
   self.config.nativeFaceButtons = true
   self.config.reticleEnabled = false
   self.config.lastBindingCollision = nil
+  return true
+end
+
+function OctoPort:ValidateDirectionalInputs()
+  if not self.config or not self.config.controllerKeys then
+    return false, "Controller keys are not configured."
+  end
+
+  local seen = {}
+  for index = 1, table.getn(directionControlOrder) do
+    local id = directionControlOrder[index]
+    local definition = FindDefinition(id)
+    local key = self.config.controllerKeys[id]
+    if not key or key == "" then
+      return false, (definition and definition.label or id) .. " is not configured."
+    end
+    if seen[key] then
+      local previous = FindDefinition(seen[key])
+      return false, key .. " is shared by " .. (previous and previous.label or seen[key]) .. " and " .. (definition and definition.label or id) .. "."
+    end
+    seen[key] = id
+  end
   return true
 end
 
@@ -203,8 +279,11 @@ function OctoPort:RefreshSetupState()
       break
     end
   end
+  local directionsValid, directionError = self:ValidateDirectionalInputs()
+  if not directionsValid then complete = false end
+  self.config.lastDirectionalError = directionsValid and nil or directionError
   self.config.setupComplete = complete
-  if complete then self.config.bindingVersion = 10 end
+  if complete then self.config.bindingVersion = 11 end
   if self.RefreshBindingMenu then self:RefreshBindingMenu() end
   return complete
 end
@@ -216,6 +295,14 @@ function OctoPort:BindControllerKey(definition, key)
 
   self.config.controllerKeys = self.config.controllerKeys or {}
   self.config.nativeModifiers = self.config.nativeModifiers or {}
+  if definition.layer and not IsModifier(key) then
+    self:Print(definition.label .. " must emit SHIFT, CTRL or ALT. This keeps all 20 combat actions native and safe.")
+    return false
+  end
+  if not definition.layer and IsModifier(key) and self.config.nativeModifiers[key] then
+    self:Print(key .. " is already used by an action layer. Choose a different signal for " .. definition.label .. ".")
+    return false
+  end
   -- One physical key may own only one controller action. Keep a visible
   -- record when a new capture displaced an older control; this is the most
   -- common sign that Armoury Crate sends arrows for both the stick and D-pad.
@@ -271,7 +358,7 @@ end
 function OctoPort:ApplyRecommendedBindings()
   if not self.config then self:InitializeConfig() end
   self.config.controllerKeys = {}
-  self.config.nativeModifiers = { SHIFT = "shift", CTRL = "ctrl" }
+  self.config.nativeModifiers = { SHIFT = "lt", CTRL = "rt" }
 
   for index = 1, table.getn(bindingDefinitions) do
     local definition = bindingDefinitions[index]
@@ -280,8 +367,8 @@ function OctoPort:ApplyRecommendedBindings()
     end
   end
 
-  self.config.movementBindingVersion = 2
-  self.config.bindingVersion = 10
+  self.config.movementBindingVersion = 3
+  self.config.bindingVersion = 11
   self.config.lastBindingCollision = nil
   self.config.arrowMovementFallback = false
   self.config.menuOnlyMode = false
@@ -289,7 +376,8 @@ function OctoPort:ApplyRecommendedBindings()
   self.config.reticleEnabled = false
   self:RefreshSetupState()
   if self.config.enabled then self:ActivateSessionBindings() end
-  self:Print("Direct ROG Ally profile selected: stick W/A/S/D, D-pad arrows and ABXY action slots 1-4. Bindings are session-only.")
+  if self.configFrame and self.configFrame:IsVisible() then self:ActivateConfigNavigationBindings() end
+  self:Print("Universal profile selected: stick W/A/S/D, D-pad arrows, ABXY actions 1-4, LT=SHIFT and RT=CTRL. Bindings are session-only.")
 end
 
 function OctoPort:ApplyNativeFaceButtons()
@@ -344,10 +432,35 @@ function OctoPort:DeactivateSessionBindings()
   self.sessionBindingsActive = false
 end
 
+function OctoPort:ApplyTemporaryBinding(key, command)
+  if not key or key == "" or not command then return false end
+  if self.sessionBindingBackup[key] == nil then
+    self.sessionBindingBackup[key] = CurrentBinding(key)
+  end
+  return SetBinding(key, command) and true or false
+end
+
+function OctoPort:GetLayerModifier(layerName)
+  for modifier, layer in pairs(self.config.nativeModifiers or {}) do
+    if layer == layerName then return modifier end
+  end
+  return nil
+end
+
 function OctoPort:ActivateSessionBindings()
   if not self.config or not self.config.enabled then return false end
   self:DeactivateSessionBindings()
   self.sessionBindingBackup = {}
+
+  if not self.config.menuOnlyMode then
+    local directionsValid, directionError = self:ValidateDirectionalInputs()
+    if not directionsValid then
+      self.config.lastDirectionalError = directionError
+      self:Print("Controller not enabled: " .. directionError .. " Calibrate stick and D-pad as eight different inputs.")
+      self.sessionBindingBackup = nil
+      return false
+    end
+  end
 
   local applied = 0
   for index = 1, table.getn(bindingDefinitions) do
@@ -355,19 +468,67 @@ function OctoPort:ActivateSessionBindings()
     local key = self.config.controllerKeys and self.config.controllerKeys[definition.id]
     local command = definition.command
     local allowedByMode = not self.config.menuOnlyMode or definition.id == "VIEW"
+    if definition.nativeTarget then command = definition.nativeTarget end
+    if definition.id == "M1" or definition.id == "M2" then
+      local rearAction = self.config.rearActions and self.config.rearActions[definition.id]
+      command = rearNativeCommands[rearAction] or command
+    end
     if self.config.nativeFaceButtons and nativeFaceCommands[definition.id] then
       command = nativeFaceCommands[definition.id]
     end
     if allowedByMode and key and key ~= "" and command and not definition.passthrough then
-      if self.sessionBindingBackup[key] == nil then
-        self.sessionBindingBackup[key] = CurrentBinding(key)
+      if self:ApplyTemporaryBinding(key, command) then applied = applied + 1 end
+    end
+  end
+
+  -- LT/RT action layers use Blizzard's native multi-action-bar commands. No
+  -- UseAction call is involved, so combat cannot taint or block the action.
+  if not self.config.menuOnlyMode then
+    for layerName, commands in pairs(layeredActionCommands) do
+      local modifier = self:GetLayerModifier(layerName)
+      if modifier then
+        for index = 1, table.getn(actionControlOrder) do
+          local id = actionControlOrder[index]
+          local key = self.config.controllerKeys[id]
+          if key and self:ApplyTemporaryBinding(modifier .. "-" .. key, commands[id]) then
+            applied = applied + 1
+          end
+        end
+        -- Holding a trigger must never stop the left stick from moving.
+        for index = 1, table.getn(movementControlOrder) do
+          local id = movementControlOrder[index]
+          local definition = FindDefinition(id)
+          local key = self.config.controllerKeys[id]
+          if definition and key and self:ApplyTemporaryBinding(modifier .. "-" .. key, definition.command) then
+            applied = applied + 1
+          end
+        end
       end
-      if SetBinding(key, command) then applied = applied + 1 end
     end
   end
 
   self.sessionBindingsActive = applied > 0
   return self.sessionBindingsActive
+end
+
+function OctoPort:ActivateConfigNavigationBindings()
+  if not self.config or not self.config.enabled or not self.sessionBindingsActive then return false end
+  local commands = {
+    A = "OCTOPORT_ACTION_A",
+    B = "OCTOPORT_ACTION_B",
+    X = "OCTOPORT_ACTION_X",
+    Y = "OCTOPORT_ACTION_Y",
+    DUP = "OCTOPORT_TARGET_UP",
+    DDOWN = "OCTOPORT_TARGET_DOWN",
+    DLEFT = "OCTOPORT_TARGET_LEFT",
+    DRIGHT = "OCTOPORT_TARGET_RIGHT",
+  }
+  local applied = 0
+  for id, command in pairs(commands) do
+    local key = self.config.controllerKeys and self.config.controllerKeys[id]
+    if key and SetBinding(key, command) then applied = applied + 1 end
+  end
+  return applied > 0
 end
 
 local function CaptureLegacyControllerKeys(config)
@@ -447,6 +608,8 @@ function OctoPort:CycleRearAction(button)
   if position > table.getn(rearActionOrder) then position = 1 end
   self.config.rearActions[button] = rearActionOrder[position]
   if self.RefreshRearActionButtons then self:RefreshRearActionButtons() end
+  if self.config.enabled and self.ActivateSessionBindings then self:ActivateSessionBindings() end
+  if self.configFrame and self.configFrame:IsVisible() then self:ActivateConfigNavigationBindings() end
 end
 
 function OctoPort:HandleRearAction(button, keystate)
@@ -454,8 +617,9 @@ function OctoPort:HandleRearAction(button, keystate)
   local action = self.config.rearActions and self.config.rearActions[button]
   if not action then action = button == "M1" and "settings" or "interact" end
 
-  if action == "interact" then
-    if keystate == "down" then TurnOrActionStart() else TurnOrActionStop() end
+  if rearNativeCommands[action] then
+    -- Native rear actions are bound directly in ActivateSessionBindings and
+    -- never reach this Lua handler. Keep this guard for old cached bindings.
     return
   elseif action == "radial" then
     if self.HandleRadialKey then self:HandleRadialKey(keystate) end
@@ -466,17 +630,6 @@ function OctoPort:HandleRearAction(button, keystate)
 
   if action == "settings" then
     if self.ToggleConfig then self:ToggleConfig() end
-  elseif action == "jump" then
-    Jump()
-  elseif action == "autorun" then
-    ToggleAutoRun()
-  elseif action == "bags" then
-    OctoPort_ToggleBags()
-  elseif action == "map" then
-    ToggleWorldMap()
-  elseif action == "target" then
-    TargetNearestEnemy()
-    if self.TargetChanged then self:TargetChanged("right") end
   end
 end
 
@@ -527,7 +680,7 @@ function OctoPort_LayerKey(layer, keystate)
   if not OctoPort or not OctoPort.config or not OctoPort.config.enabled then return end
   OctoPort.controllerLayerState = OctoPort.controllerLayerState or {}
   OctoPort.controllerLayerState[layer] = keystate == "down" and true or false
-  OctoPort:SignalInput(layer == "shift" and "LB" or "LT", keystate)
+  OctoPort:SignalInput(layer == "lt" and "LT" or "RT", keystate)
   if OctoPort.UpdateLayer then OctoPort:UpdateLayer(true) end
 end
 

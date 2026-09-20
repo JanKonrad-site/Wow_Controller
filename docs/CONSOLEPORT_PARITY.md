@@ -8,18 +8,18 @@ the current OctoLauncher entry expects one addon TOC in the repository root.
 
 ## Compatibility decision
 
-| ConsolePort area | 1.12 implementation | Status after 0.8.0 |
+| ConsolePort area | 1.12 implementation | Status after 0.9.0 |
 |---|---|---|
 | Controller setup | Capture keyboard/mouse signals produced by Armoury Crate | Safe session-only setup |
 | Character movement | Four left-stick key signals bound directly to Blizzard movement commands | Implemented; protected-Lua-free, session-only and reversible |
-| Action bars | Addon-owned visual mirrors of Blizzard action slots | Safe base implemented |
-| Modifier layers | Shift/Ctrl or mapped LB/LT layers | Implemented |
+| Action bars | Addon-owned editable mirrors for 4 base + 8 LT + 8 RT native slots | Implemented; 20 inputs |
+| Modifier layers | Native Shift/Ctrl/Alt emitted by LT and RT | Implemented; protected-Lua-free |
 | Targeting | Friendly/enemy cycling on D-pad signals distinct from W/A/S/D movement | Implemented; duplicate device signals are rejected |
 | Reticle | Not loaded; target cycling does not require an FPS reticle | Removed from active UI |
 | Utility rings | Eight-slot radial menu | Implemented, opt-in |
 | Menu navigation | Focus graph for known Blizzard panels | Partial; expand panel by panel |
 | UI cursor | Armoury Crate right-stick mouse mapping | External mapping; 1.12 has no native gamepad cursor API |
-| World interaction | Target + `TurnOrActionStart/Stop` | Partial; modern interact/gamepad APIs do not exist |
+| World interaction | Native `TURNORACTION` binding on a configured physical button | Partial; modern interact/gamepad APIs do not exist |
 | On-screen keyboard | EditBox-focused custom keyboard | Planned |
 | Unit-frame control | Explicit party/raid focus graph | Planned; no global unit-frame hooks |
 | Loot control | Controller focus and loot actions | Planned; current cursor placement remains opt-in |
@@ -54,6 +54,7 @@ behavior.
 
 ConsoleExperienceClassic also targets Vanilla `1.12.1`. Its documented setup
 uses Steam Input to translate a physical controller into keyboard and mouse
-signals. WOW Controller follows that compatibility principle for movement, but
-does not copy its source and does not persistently overwrite the player's WoW
-binding set.
+signals, and its action layout uses Shift/Ctrl key combinations for layers.
+WOW Controller follows those compatibility principles without copying its
+source, replacing Blizzard globals or persistently overwriting the player's
+WoW binding set.

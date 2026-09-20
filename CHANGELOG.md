@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.9.0
+
+- Split the left stick and D-pad into a validated eight-signal profile; controller activation now fails safely on a duplicate or missing direction.
+- Added 20 native combat inputs: base ABXY, LT + ABXY/D-pad and RT + ABXY/D-pad.
+- Preserved movement while either trigger is held by adding native modified movement bindings.
+- Rebuilt the HUD as an editable 4 + 8 + 8 action layout with drag/drop and action pickup.
+- Added focused eight-direction calibration and visible LT/RT combination diagnostics.
+- Changed LT/RT to required native modifiers and moved device-side mouse clicks to LB/RB defaults.
+- Temporarily routes ABXY to controller-menu navigation while settings are open, then restores native combat bindings.
+- Converted configurable rear-button interaction, jump, autorun, bags, map and target actions to native Blizzard commands instead of protected Lua calls.
+- Kept all runtime bindings session-only with exact restoration and no normal-play `SaveBindings` call.
+
 ## 0.8.0
 
 - Removed the CHOD/CIL mode switch; the left stick and D-pad now stay active simultaneously through distinct device signals.

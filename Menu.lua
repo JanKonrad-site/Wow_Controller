@@ -98,6 +98,9 @@ function OctoPort:ShowConfigTab(index, forceOpen)
   self:RefreshBindingMenu()
   self:UpdateInputDiagnostics()
   if forceOpen then self.configFrame:Show() end
+  if self.configFrame:IsVisible() and self.ActivateConfigNavigationBindings then
+    self:ActivateConfigNavigationBindings()
+  end
 end
 
 function OctoPort:ToggleConfig(forceOpen)
@@ -211,9 +214,11 @@ function OctoPort:StartBindingWizard()
   self.captureSingle = false
   self.captureSequence = nil
   self.captureFaceActions = nil
+  self.captureDirections = nil
   self.captureIndex = 1
   self.captureDefinition = self.bindingDefinitions[1]
   self.bindingCaptureActive = true
+  if self.sessionBindingsActive and self.DeactivateSessionBindings then self:DeactivateSessionBindings() end
   self.configFrame:Hide()
   self:UpdateCapturePrompt()
   self.captureFrame:Show()
@@ -225,9 +230,27 @@ function OctoPort:StartFaceBindingWizard()
   self.captureSingle = false
   self.captureSequence = { "A", "B", "X", "Y" }
   self.captureFaceActions = true
+  self.captureDirections = nil
   self.captureIndex = 1
   self.captureDefinition = self:GetBindingDefinition(self.captureSequence[1])
   self.bindingCaptureActive = true
+  if self.sessionBindingsActive and self.DeactivateSessionBindings then self:DeactivateSessionBindings() end
+  self.configFrame:Hide()
+  self:UpdateCapturePrompt()
+  self.captureFrame:Show()
+end
+
+function OctoPort:StartDirectionalBindingWizard()
+  self:CreateConfigMenu()
+  self:CreateCaptureOverlay()
+  self.captureSingle = false
+  self.captureSequence = { "LSUP", "LSDOWN", "LSLEFT", "LSRIGHT", "DUP", "DDOWN", "DLEFT", "DRIGHT" }
+  self.captureDirections = true
+  self.captureFaceActions = nil
+  self.captureIndex = 1
+  self.captureDefinition = self:GetBindingDefinition(self.captureSequence[1])
+  self.bindingCaptureActive = true
+  if self.sessionBindingsActive and self.DeactivateSessionBindings then self:DeactivateSessionBindings() end
   self.configFrame:Hide()
   self:UpdateCapturePrompt()
   self.captureFrame:Show()
@@ -238,9 +261,11 @@ function OctoPort:StartSingleBinding(definition)
   self.captureSingle = true
   self.captureSequence = nil
   self.captureFaceActions = nil
+  self.captureDirections = nil
   self.captureIndex = nil
   self.captureDefinition = definition
   self.bindingCaptureActive = true
+  if self.sessionBindingsActive and self.DeactivateSessionBindings then self:DeactivateSessionBindings() end
   self:UpdateCapturePrompt()
   self.captureFrame:Show()
 end
@@ -251,20 +276,24 @@ function OctoPort:StopBindingCapture(completed)
     self.config.menuOnlyMode = false
     self.config.nativeFaceButtons = true
     self.config.reticleEnabled = false
-    if self.config.enabled and self.ActivateSessionBindings then self:ActivateSessionBindings() end
   end
   local capturedFaces = completed and self.captureFaceActions
+  local capturedDirections = completed and self.captureDirections
   self.bindingCaptureActive = false
   self.captureDefinition = nil
   self.captureIndex = nil
   self.captureSingle = nil
   self.captureSequence = nil
   self.captureFaceActions = nil
+  self.captureDirections = nil
   if self.captureFrame then self.captureFrame:Hide() end
+  if self.config.enabled and self.ActivateSessionBindings then self:ActivateSessionBindings() end
   self:ShowConfigTab(completed and 4 or 2, true)
   if completed then
     if capturedFaces then
       self:Print("ABXY captured: physical A/B/X/Y now activate native action slots 1/2/3/4.")
+    elseif capturedDirections then
+      self:Print("Stick and D-pad calibrated as eight separate inputs. Base D-pad now targets; LT/RT + D-pad use action slots.")
     else
       self:Print("Controller wizard complete. Press every control once in Diagnostics.")
     end
@@ -352,6 +381,8 @@ function OctoPort:RefreshBindingMenu()
       local previous = self:GetBindingDefinition(collision.previous)
       local current = self:GetBindingDefinition(collision.current)
       self.setupStatus:SetText("|cffff6655KOLIZE " .. collision.key .. ": " .. (previous and previous.label or collision.previous) .. " / " .. (current and current.label or collision.current) .. "|r")
+    elseif self.config.lastDirectionalError then
+      self.setupStatus:SetText("|cffff6655SMERY NEJSOU ODDELENE: " .. self.config.lastDirectionalError .. "|r")
     elseif self.config.menuOnlyMode then
       self.setupStatus:SetText("|cffffb83dAKTIVNI JE JEN TLACITKO PRO MENU|r")
     else
@@ -370,6 +401,22 @@ local function RawInputMatch(key)
     local matched = keys[definition.id] == key
     if definition.layer and native[key] == definition.layer then matched = true end
     if matched then table.insert(matches, definition) end
+  end
+
+  -- Show modified input as the actual controller combination. This makes the
+  -- raw tester useful for verifying all 16 LT/RT layer actions, not just the
+  -- unmodified physical buttons.
+  local modifier, baseKey = string.match(key, "^(%u+)%-(.+)$")
+  local layer = modifier and native[modifier]
+  if layer and baseKey then
+    for index = 1, table.getn(OctoPort.bindingDefinitions) do
+      local definition = OctoPort.bindingDefinitions[index]
+      if keys[definition.id] == baseKey and OctoPort.layeredActionCommands and OctoPort.layeredActionCommands[layer] and OctoPort.layeredActionCommands[layer][definition.id] then
+        table.insert(matches, { id = definition.id, label = string.upper(layer) .. " + " .. definition.label })
+      elseif keys[definition.id] == baseKey and definition.movement then
+        table.insert(matches, { id = definition.id, label = string.upper(layer) .. " + " .. definition.label .. " (movement)" })
+      end
+    end
   end
   return matches
 end
@@ -431,7 +478,7 @@ function OctoPort:CreateRawInputTest()
   title:SetTextColor(0.24, 0.84, 0.81)
 
   local body = MakeLabel(frame, "GameFontHighlightSmall",
-    "Postupne pohni levou packou a stiskni ABXY, D-pad, Menu, View, LB/LT, RB/RT, L3/R3 a M1/M2. Escape se take zobrazi. Kdyz se nic nezmeni, tlacitko posila jen XInput a musi se premapovat v Armoury Crate.", 520)
+    "Postupne pohni levou packou a stiskni ABXY, D-pad, Menu, View, LT/RT vrstvy, LB/RB kliky, L3/R3 a M1/M2. Escape se take zobrazi. Kdyz se nic nezmeni, tlacitko posila jen XInput a musi se premapovat v Armoury Crate.", 520)
   body:SetPoint("TOP", title, "BOTTOM", 0, -16)
   body:SetJustifyH("LEFT")
 
@@ -518,9 +565,9 @@ function OctoPort:UpdateInputDiagnostics()
     local row = self.diagnosticRows[index]
     local active = self.lastControllerInput == row.id and self.lastControllerInputAt and now - self.lastControllerInputAt < 0.65
     local native = self.config and self.config.nativeModifiers or {}
-    if row.id == "LB" and ((native.SHIFT == "shift" and IsShiftKeyDown and IsShiftKeyDown()) or (native.CTRL == "shift" and IsControlKeyDown and IsControlKeyDown()) or (native.ALT == "shift" and IsAltKeyDown and IsAltKeyDown())) then
+    if row.id == "LT" and ((native.SHIFT == "lt" and IsShiftKeyDown and IsShiftKeyDown()) or (native.CTRL == "lt" and IsControlKeyDown and IsControlKeyDown()) or (native.ALT == "lt" and IsAltKeyDown and IsAltKeyDown())) then
       active = true
-    elseif row.id == "LT" and ((native.SHIFT == "ctrl" and IsShiftKeyDown and IsShiftKeyDown()) or (native.CTRL == "ctrl" and IsControlKeyDown and IsControlKeyDown()) or (native.ALT == "ctrl" and IsAltKeyDown and IsAltKeyDown())) then
+    elseif row.id == "RT" and ((native.SHIFT == "rt" and IsShiftKeyDown and IsShiftKeyDown()) or (native.CTRL == "rt" and IsControlKeyDown and IsControlKeyDown()) or (native.ALT == "rt" and IsAltKeyDown and IsAltKeyDown())) then
       active = true
     elseif row.id == "RSTICK" and self.lastRightStickAt and now - self.lastRightStickAt < 0.65 then
       active = true
@@ -575,7 +622,7 @@ local function BuildSetupPanel(panel)
   title:SetTextColor(0.24, 0.84, 0.81)
 
   local body = MakeLabel(panel, "GameFontHighlightSmall",
-    "BEZPECNY REZIM: klavesy ovladace se pouziji jen po zapnuti a jen pro aktualni relaci; pri vypnuti nebo odhlaseni se puvodni vazby vrati. Leva packa je navazana primo na nativni pohyb Blizzard UI, bez chranenych Lua volani. Prava packa zustava mysi.", 470)
+    "BEZPECNY REZIM: leva packa a D-pad jsou dve striktne oddelene skupiny. Zakladni ABXY dava 4 akce; LT a RT pridaji vzdy ABXY + D-pad, celkem 20. Bojove akce i pohyb pouzivaji nativni Blizzard bindingy, ne chranena Lua volani.", 470)
   body:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -16)
   body:SetJustifyH("LEFT")
   body:SetJustifyV("TOP")
@@ -604,25 +651,30 @@ local function BuildSetupPanel(panel)
   end))
   preset:SetPoint("TOPLEFT", wizard, "BOTTOMLEFT", 0, -12)
 
-  local restore = AddFocusable(panel, MakeButton(panel, "OBNOVIT PUVODNI", 150, function()
-    OctoPort:RestoreBindings()
+  local directions = AddFocusable(panel, MakeButton(panel, "KALIBROVAT 8 SMERU", 180, function()
+    OctoPort:StartDirectionalBindingWizard()
   end))
-  restore:SetPoint("LEFT", preset, "RIGHT", 10, 0)
+  directions:SetPoint("LEFT", preset, "RIGHT", 10, 0)
 
   local nativeFace = AddFocusable(panel, MakeButton(panel, "NACIST ABXY 1-4", 160, function()
     OctoPort:StartFaceBindingWizard()
   end))
-  nativeFace:SetPoint("LEFT", restore, "RIGHT", 10, 0)
+  nativeFace:SetPoint("LEFT", directions, "RIGHT", 10, 0)
 
-  local enable = AddFocusable(panel, MakeButton(panel, "ZAPNOUT BEZPECNE", 480, function()
+  local restore = AddFocusable(panel, MakeButton(panel, "OBNOVIT PUVODNI", 150, function()
+    OctoPort:RestoreBindings()
+  end))
+  restore:SetPoint("TOPLEFT", preset, "BOTTOMLEFT", 0, -12)
+
+  local enable = AddFocusable(panel, MakeButton(panel, "ZAPNOUT BEZPECNE", 340, function()
     OctoPort:SetEnabled(not OctoPort.config.enabled)
     this:SetText(OctoPort.config.enabled and "VYPNOUT A OBNOVIT BINDY" or "ZAPNOUT BEZPECNE")
   end))
-  enable:SetPoint("TOPLEFT", preset, "BOTTOMLEFT", 0, -12)
+  enable:SetPoint("LEFT", restore, "RIGHT", 10, 0)
 
   local note = MakeLabel(panel, "GameFontDisableSmall",
-    "V Armoury Crate nastav CONTROL MODE = DESKTOP: leva packa W/A/S/D, D-pad sipky. Musi to byt osm ruznych signalu, jinak soubezny pohyb a targeting nejsou mozne. NACIST ABXY zachyti i Enter/Escape z fyzickych tlacitek a pripoji je primo k akcim 1-4. M1/M2 musi byt samostatna tlacitka, ne Secondary Function.", 470)
-  note:SetPoint("TOPLEFT", enable, "BOTTOMLEFT", 0, -18)
+    "Vychozi univerzalni profil: L-stick W/A/S/D, D-pad sipky, LT SHIFT, RT CTRL, ABXY 1/2/3/4, LB/RB skutecne mouse BUTTON1/BUTTON2. Osm smeru musi byt osm ruznych signalu; addon se pri kolizi nezapne. M1/M2 musi byt samostatna tlacitka, ne Secondary Function.", 470)
+  note:SetPoint("TOPLEFT", restore, "BOTTOMLEFT", 0, -18)
   note:SetJustifyH("LEFT")
 
   panel:SetScript("OnShow", function()
@@ -671,7 +723,7 @@ local function BuildControlsPanel(panel)
   end))
   wizard:SetPoint("BOTTOMLEFT", panel, "BOTTOMLEFT", 0, 0)
 
-  local help = MakeLabel(panel, "GameFontDisableSmall", "D-pad vybira. RB / levy klik potvrzuje, View menu zavre.", 300)
+  local help = MakeLabel(panel, "GameFontDisableSmall", "D-pad vybira. A potvrzuje, B zavre. LT/RT musi byt SHIFT/CTRL/ALT.", 320)
   help:SetPoint("LEFT", wizard, "RIGHT", 12, 0)
 end
 
@@ -680,17 +732,11 @@ local function BuildGameplayPanel(panel)
   title:SetPoint("TOPLEFT", panel, "TOPLEFT", 8, -2)
   title:SetTextColor(0.24, 0.84, 0.81)
 
-  local autoTarget = AddFocusable(panel, MakeButton(panel, "", 200, function()
-    OctoPort.config.autoTarget = not OctoPort.config.autoTarget
-    SetToggleText(this, "AUTO TARGET", OctoPort.config.autoTarget)
-  end))
-  autoTarget:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -22)
-
   local autoQuest = AddFocusable(panel, MakeButton(panel, "", 200, function()
     OctoPort.config.autoAcceptQuests = not OctoPort.config.autoAcceptQuests
     SetToggleText(this, "AUTO QUEST", OctoPort.config.autoAcceptQuests)
   end))
-  autoQuest:SetPoint("TOPLEFT", autoTarget, "BOTTOMLEFT", 0, -10)
+  autoQuest:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -22)
 
   local hud = AddFocusable(panel, MakeButton(panel, "", 200, function()
     OctoPort:SetEnabled(not OctoPort.config.enabled)
@@ -698,7 +744,7 @@ local function BuildGameplayPanel(panel)
   end))
   hud:SetPoint("TOPLEFT", autoQuest, "BOTTOMLEFT", 0, -10)
 
-  local editBars = AddFocusable(panel, MakeButton(panel, "UPRAVIT LISTY AKCI", 200, function()
+  local editBars = AddFocusable(panel, MakeButton(panel, "UPRAVIT 20 AKCI", 200, function()
     OctoPort.config.editMode = not OctoPort.config.editMode
     OctoPort:UpdateLayer(true)
     OctoPort.configFrame:Hide()
@@ -755,7 +801,6 @@ local function BuildGameplayPanel(panel)
   OctoPort.rearM2Button = rearM2
 
   panel:SetScript("OnShow", function()
-    SetToggleText(autoTarget, "AUTO TARGET", OctoPort.config.autoTarget)
     SetToggleText(autoQuest, "AUTO QUEST", OctoPort.config.autoAcceptQuests)
     SetToggleText(hud, "CONTROLLER HUD", OctoPort.config.enabled)
     hold:SetText("PODRZENI MENU: " .. (OctoPort.config.radialHold or 0.35) .. " s")
@@ -769,7 +814,7 @@ local function BuildDiagnosticsPanel(panel)
   title:SetTextColor(0.24, 0.84, 0.81)
 
   local body = MakeLabel(panel, "GameFontHighlightSmall",
-    "Stiskni jednotliva tlacitka. Zelene SIGNAL potvrzuje vstup addonu. Modre NATIVE u leve packy znamena primy Blizzard binding; ten otestuj pohybem postavy ve svete.", 470)
+    "Stiskni jednotliva tlacitka. Leva packa musi hlasit ctyri jine vstupy nez D-pad. Modre NATIVE znamena primy Blizzard binding. LT a RT rozsvecuji samostatne osmipozicove akcni vrstvy.", 470)
   body:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -10)
   body:SetJustifyH("LEFT")
 
@@ -884,7 +929,7 @@ function OctoPort:CreateConfigMenu()
   BuildGameplayPanel(self.configPanels[3])
   BuildDiagnosticsPanel(self.configPanels[4])
 
-  local hint = MakeLabel(frame, "GameFontDisableSmall", "D-pad navigace  |  RB / levy klik potvrdit  |  View zavrit  |  WC = test")
+  local hint = MakeLabel(frame, "GameFontDisableSmall", "D-pad navigace  |  A potvrdit  |  B / View zavrit  |  WC = test")
   hint:SetPoint("BOTTOMLEFT", frame, "BOTTOMLEFT", 28, 28)
 
   frame:SetScript("OnUpdate", function()
@@ -892,6 +937,14 @@ function OctoPort:CreateConfigMenu()
     if OctoPort.configMenuElapsed < 0.10 then return end
     OctoPort.configMenuElapsed = 0
     OctoPort:UpdateInputDiagnostics()
+  end)
+  frame:SetScript("OnShow", function()
+    if OctoPort.ActivateConfigNavigationBindings then OctoPort:ActivateConfigNavigationBindings() end
+  end)
+  frame:SetScript("OnHide", function()
+    if not OctoPort.bindingCaptureActive and OctoPort.config and OctoPort.config.enabled and OctoPort.ActivateSessionBindings then
+      OctoPort:ActivateSessionBindings()
+    end
   end)
 
   self.configFrame = frame

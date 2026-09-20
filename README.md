@@ -1,8 +1,8 @@
 # WOW Controller
 
-Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X**. Version 0.8.0 uses the direct console layout: the left stick and D-pad remain separate, ABXY activate native action slots 1-4, and the obsolete center reticle is no longer loaded.
+Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X** and other keyboard/mouse-emulating controllers. Version 0.9.0 keeps the left stick and D-pad strictly separate and provides 20 native action inputs: four base ABXY actions, eight LT actions and eight RT actions.
 
-OctoWoW's 1.12 client has no native XInput support. Armoury Crate SE or Steam Input must convert the physical controller to keyboard/mouse signals. The addon binds the four left-stick signals directly to Blizzard's native movement commands; it never calls the protected movement functions from Lua. The right stick remains a mouse. This is the same device-side principle used by ConsoleExperienceClassic, while WOW Controller keeps every binding temporary and reversible.
+OctoWoW's 1.12 client has no native XInput support. Armoury Crate SE or Steam Input must convert the physical controller to keyboard/mouse signals. The addon binds the four left-stick signals directly to Blizzard's native movement commands; it never calls protected movement functions from Lua. LT and RT emit real Shift/Ctrl modifiers, following the layered-key principle used by ConsoleExperienceClassic. WOW Controller keeps every binding temporary and reversible.
 
 ## Safety model
 
@@ -10,6 +10,7 @@ OctoWoW's 1.12 client has no native XInput support. Armoury Crate SE or Steam In
 - Updating from 0.1-0.4 removes persisted `OCTOPORT_*` commands and restores the pre-addon bindings captured by those releases.
 - Setup stores chosen keys only in `OctoPortConfig`; it does not call `SaveBindings`.
 - Enabling the controller applies temporary in-memory bindings. Disabling it or logging out restores the exact previous actions.
+- All 20 combat inputs bind to Blizzard's native `ACTIONBUTTON` / `MULTIACTIONBAR` commands. The addon never calls `UseAction` for normal controller combat.
 - The HUD mirrors action slots in addon-owned frames. It never reparents Blizzard action buttons and never replaces `ActionButton_GetPagedID` or `UIParent_ManageFramePositions`.
 - `/octoport restore` is an explicit emergency cleanup and turns the addon OFF.
 
@@ -29,13 +30,13 @@ The repository name must remain `Wow_Controller`: OctoLauncher clones it directl
 
 ## First controller setup
 
-The wizard first captures all four left-stick directions, then A, B, X, Y, all four D-pad directions and Menu. LB, LT, RB, RT, L3, R3, View, rear M1 and rear M2 are optional steps. Enter, Escape, arrow keys, F-keys, ordinary keys and mouse buttons are supported. Map the left stick to `W/A/S/D` in Armoury Crate or capture any four alternative keys in the wizard. The D-pad must emit four different signals. If the same key is received for two controls, the wizard stops and shows the collision instead of silently replacing movement with targeting.
+The wizard captures all four left-stick directions, A/B/X/Y, all four D-pad directions, Menu, LT and RT. LT and RT are required and must emit two different native modifiers chosen from Shift, Ctrl and Alt. LB/RB, L3/R3, View and rear M1/M2 are optional. Enter, Escape, arrows, F-keys, ordinary keys and mouse buttons are supported. If one signal is received for two controls, the wizard stops and shows the collision.
 
 The minimap **WC** button remains visible even while the controller session is off. Left-click opens **RAW TEST**, which displays exactly what WoW receives before the addon binds anything, including `ESCAPE`. Move the left stick first: it should report `W`, `S`, `A`, `D`. If it reports arrow keys, the Armoury Crate profile—not Lua—is routing the stick to the D-pad targeting signals. Right-stick movement is reported as `MOUSE MOVE`.
 
 If at least one physical button reaches the raw test, press it and choose **VSTUP = MENU**. WOW Controller enables a menu-only session and binds only that one key; movement and face-button bindings remain untouched.
 
-The left stick and D-pad must emit eight distinct signals. Set the stick to `W/A/S/D` and the D-pad to arrow keys in the OctoWoW Desktop Mode profile. Version 0.8 intentionally does not offer a CHOD/CIL toggle: one keyboard signal cannot identify whether it came from the physical stick or D-pad, so duplicated arrows cannot provide simultaneous movement and targeting.
+The left stick and D-pad must emit eight distinct signals. Set the stick to `W/A/S/D` and the D-pad to arrow keys in the OctoWoW Desktop Mode profile. Version 0.9 validates this at runtime and refuses to enable a partial profile. One keyboard signal cannot identify whether it came from the physical stick or D-pad.
 
 If the wizard does not advance when you press a control, that button is not sending a keyboard/mouse signal to WoW. Assign any unused key to it in the game's Armoury Crate Desktop Mode profile, return to WoW and press it again. For mouse-button capture, point the cursor at the capture window. Auto mode can select Gamepad Mode, which the old 1.12 client cannot consume as XInput.
 
@@ -47,8 +48,10 @@ Recommended device-side controls that do not need the wizard:
 |---|---|---|
 | Left stick | W / A / S / D | Direct Blizzard movement bindings |
 | Right stick | Mouse | Camera, cursor and radial direction |
-| RB | Left mouse button | UI click |
-| RT | Right mouse button | Camera and world interaction |
+| LT | Shift | Eight-action LT layer |
+| RT | Ctrl | Eight-action RT layer |
+| LB | Left mouse button | UI click (device-side) |
+| RB | Right mouse button | Camera and world interaction (device-side) |
 | L3 | Num Lock | Auto run |
 | R3 | Space | Jump |
 | Menu | F8 | Radial wheel / game menu |
@@ -58,7 +61,7 @@ Recommended device-side controls that do not need the wizard:
 
 The **NACIST ABXY 1-4** Setup button asks for physical A, B, X and Y in sequence, then routes whatever they actually emit to Blizzard's native action slots 1, 2, 3 and 4. This also works when Desktop Mode currently emits Enter or Escape. The original Enter/Escape actions are restored when the controller session is disabled or the player logs out.
 
-The fixed profile—stick W/A/S/D, ABXY 1-4, D-pad arrows, Menu F8, View F7 and rear F6/F5—is available through **ROG ALLY PROFIL** or `/octoport preset`. It requires matching Armoury Crate output. All bindings remain temporary.
+The fixed profile—stick W/A/S/D, ABXY 1-4, D-pad arrows, LT Shift, RT Ctrl, Menu F8, View F7 and rear F6/F5—is available through **ROG ALLY PROFIL** or `/octoport preset`. It requires matching Armoury Crate output. All bindings remain temporary.
 
 ## Controller menu
 
@@ -66,23 +69,24 @@ Open it by right-clicking the persistent **WC** minimap button, with `/wc`, `/oc
 
 - **SETUP** — full wizard, safe ROG Ally profile, enable/disable and emergency restore.
 - **OVLADANI** — view or remap every controller action separately.
-- **HRANI** — auto target, auto quest, configurable M1/M2 actions, HUD, bar editor and radial settings.
+- **HRANI** — auto target, auto quest, configurable M1/M2 actions, 20-slot HUD editor and radial settings.
 - **DIAGNOSTIKA** — all controller inputs, native/pass-through state and explicit system-only ASUS buttons; **RAW TEST** displays actual incoming keys and mouse signals.
 
 Inside the menu, D-pad left/right changes tabs and up/down moves focus. Use RB/left click to activate the highlighted control; View opens or closes the menu.
 
 ## Default behavior
 
-- D-pad Up/Down cycles friendly targets; Left/Right cycles enemy targets while the left stick continues moving with W/A/S/D.
+- D-pad Up/Down cycles friendly targets and Left/Right cycles enemy targets. Holding LT or RT temporarily changes all four D-pad directions into action inputs.
 - Left stick drives Blizzard's native forward/backward/strafe binding commands. Its four emitted keys are active only during the controller session and are restored exactly when the addon is disabled or the player logs out.
 - D-pad controls Controller settings and cardinal radial selection; movement keys remain owned by Blizzard UI to avoid protected-action blocking.
 - A/B/X/Y use Blizzard's native action slots 1/2/3/4 through the physical signals captured by Setup.
-- LB and LT select the second and third four-action layers. They can be native Shift/Ctrl or ordinary mapped keys.
+- LT + ABXY/D-pad uses action slots 61-68; RT + ABXY/D-pad uses slots 49-56. Holding either trigger does not interrupt left-stick movement.
+- Choose **UPRAVIT 20 AKCI** and drag spells or items directly onto the addon's 4 + 8 + 8 slot HUD. Right-click a slot to pick its action up.
 - Tap Menu for the game menu. Hold Menu for the eight-slot radial utility wheel.
 - In the radial wheel, aim with the mouse/right stick or select cardinal slots with D-pad; releasing Menu activates the selected utility.
 - The default wheel contains Map, Quests, Bags, Character, Mount, Chat, Combat Log and Spellbook. Its eight positions are editable.
-- Auto target acquires the nearest enemy only when an action is pressed without a live target.
-- Auto quest accepts an already displayed quest. Hold LB while the quest opens to read it first.
+- Combat actions are never intercepted by Lua. Use D-pad Right for the next enemy or D-pad Left for the previous enemy.
+- Auto quest accepts an already displayed quest. Hold LT while the quest opens to read it first.
 
 ## Commands
 
@@ -92,11 +96,10 @@ Inside the menu, D-pad left/right changes tabs and up/down moves focus. Use RB/l
 - `/octoport preset` — select the session-only ROG Ally F-key profile.
 - `/octoport diagnostics` — open live input testing.
 - `/octoport restore` — remove saved `OCTOPORT_*` bindings, restore captured actions and turn the addon off.
-- `/octoport edit` — show or hide a preview of all three action layers. Abilities remain editable on Blizzard's original bars.
+- `/octoport edit` — show or hide all 20 editable action slots.
 - `/octoport move` — unlock or lock the HUD.
 - `/octoport scale 0.7-1.6` — resize the HUD.
 - `/octoport wheel` — edit the radial menu.
-- `/octoport target on|off` — toggle automatic targeting.
 - `/octoport quest on|off` — toggle quest acceptance.
 - `/octoport mount NAME` — set the radial mount spell or bag item.
 
