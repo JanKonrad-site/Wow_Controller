@@ -5,6 +5,14 @@ local questAutomation = CreateFrame("Frame", "OctoPortQuestAutomation", UIParent
 questAutomation.pendingAccept = nil
 questAutomation.waited = 0
 
+local function CanAcceptQuest()
+  local locked = (InCombatLockdown and InCombatLockdown()) or
+    (UnitAffectingCombat and UnitAffectingCombat("player"))
+  if not locked then return true end
+  OctoPort:Print("Prijeti questu je behem boje zablokovane. Zkus ho po skonceni boje.")
+  return false
+end
+
 questAutomation:RegisterEvent("QUEST_DETAIL")
 questAutomation:RegisterEvent("QUEST_FINISHED")
 
@@ -38,7 +46,12 @@ questAutomation:SetScript("OnUpdate", function()
   local enabled = QuestFrameAcceptButton and QuestFrameAcceptButton:IsEnabled()
   if enabled and enabled ~= 0 then
     this.pendingAccept = nil
-    AcceptQuest()
+    if not CanAcceptQuest() then return end
+    if AcceptQuest then
+      AcceptQuest()
+    else
+      OctoPort:Print("Prijeti questu neni v tomto klientu dostupne.")
+    end
     return
   end
 

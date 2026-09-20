@@ -61,6 +61,41 @@ local function ComposeKey(raw)
   return key
 end
 
+local directionCaptureIds = {
+  LSUP = true, LSDOWN = true, LSLEFT = true, LSRIGHT = true,
+  DUP = true, DDOWN = true, DLEFT = true, DRIGHT = true,
+}
+
+local function CopyMap(source)
+  local result = {}
+  for key, value in pairs(source or {}) do result[key] = value end
+  return result
+end
+
+local function IsModifierKey(key)
+  return key == "SHIFT" or key == "CTRL" or key == "ALT"
+end
+
+local function NormalizeReleasedKey(raw)
+  if not raw or raw == "" then return nil end
+  raw = NormalizeMouseButton(raw)
+  if raw == "LSHIFT" or raw == "RSHIFT" then return "SHIFT" end
+  if raw == "LCTRL" or raw == "RCTRL" then return "CTRL" end
+  if raw == "LALT" or raw == "RALT" then return "ALT" end
+  return raw
+end
+
+function OctoPort:RestoreGameplayAfterModal()
+  if not self.config or not self.config.enabled or not self.ActivateSessionBindings then return true end
+  local activated, reason = self:ActivateSessionBindings()
+  if activated then return true end
+  if reason == "deferred" or self.bindingMutationDeferred then return nil, "deferred" end
+  self.config.enabled = false
+  if self.SetUIEnabled then self:SetUIEnabled(false) end
+  self:Print("Controller zustal vypnuty: dokoncete zivou kalibraci vstupu v Setupu.")
+  return false
+end
+
 function OctoPort:SetConfigFocus(index)
   if not self.configPanel then return end
   local focusables = self.configPanel.focusables or {}
@@ -145,8 +180,8 @@ end
 function OctoPort:CreateCaptureOverlay()
   if self.captureFrame then return end
   local frame = CreateFrame("Frame", "OctoPortBindingCapture", UIParent)
-  frame:SetWidth(520)
-  frame:SetHeight(230)
+  frame:SetWidth(620)
+  frame:SetHeight(300)
   frame:SetPoint("CENTER", UIParent, "CENTER", 0, 40)
   frame:SetFrameStrata("FULLSCREEN_DIALOG")
   frame:SetBackdrop({
@@ -171,6 +206,14 @@ function OctoPort:CreateCaptureOverlay()
   progress:SetPoint("TOP", instruction, "BOTTOM", 0, -14)
   progress:SetJustifyH("CENTER")
 
+  local stickStatus = MakeLabel(frame, "GameFontHighlightSmall", "", 500)
+  stickStatus:SetPoint("TOP", progress, "BOTTOM", 0, -22)
+  stickStatus:SetJustifyH("CENTER")
+
+  local dpadStatus = MakeLabel(frame, "GameFontHighlightSmall", "", 500)
+  dpadStatus:SetPoint("TOP", stickStatus, "BOTTOM", 0, -12)
+  dpadStatus:SetJustifyH("CENTER")
+
   local cancel = MakeButton(frame, "ZAVRIT PRUVODCE", 150, function()
     OctoPort:StopBindingCapture(false)
   end)
@@ -184,15 +227,54 @@ function OctoPort:CreateCaptureOverlay()
   frame:SetScript("OnKeyDown", function()
     OctoPort:CaptureControllerKey(arg1)
   end)
+  frame:SetScript("OnKeyUp", function()
+    OctoPort:ReleaseCapturedKey(arg1)
+  end)
   frame:SetScript("OnMouseDown", function()
     OctoPort:CaptureControllerKey(arg1)
+  end)
+  frame:SetScript("OnMouseUp", function()
+    OctoPort:ReleaseCapturedKey(arg1)
   end)
 
   frame.title = title
   frame.instruction = instruction
   frame.progress = progress
+  frame.stickStatus = stickStatus
+  frame.dpadStatus = dpadStatus
   frame.skip = skip
   self.captureFrame = frame
+end
+
+local function CapturedKeyText(owner, id)
+  local key = owner.captureWorkingKeys and owner.captureWorkingKeys[id]
+  if not key then return "--" end
+  if owner.captureObservedIds and owner.captureObservedIds[id] then
+    return "|cff4df273" .. key .. "|r"
+  end
+  return "|cff808890" .. key .. "|r"
+end
+
+function OctoPort:UpdateDirectionCaptureStatus()
+  if not self.captureFrame then return end
+  if not self.captureIncludesDirections then
+    self.captureFrame.stickStatus:Hide()
+    self.captureFrame.dpadStatus:Hide()
+    return
+  end
+
+  self.captureFrame.stickStatus:SetText(
+    "L-STICK   ^ " .. CapturedKeyText(self, "LSUP") ..
+    "   v " .. CapturedKeyText(self, "LSDOWN") ..
+    "   < " .. CapturedKeyText(self, "LSLEFT") ..
+    "   > " .. CapturedKeyText(self, "LSRIGHT"))
+  self.captureFrame.dpadStatus:SetText(
+    "D-PAD     ^ " .. CapturedKeyText(self, "DUP") ..
+    "   v " .. CapturedKeyText(self, "DDOWN") ..
+    "   < " .. CapturedKeyText(self, "DLEFT") ..
+    "   > " .. CapturedKeyText(self, "DRIGHT"))
+  self.captureFrame.stickStatus:Show()
+  self.captureFrame.dpadStatus:Show()
 end
 
 function OctoPort:UpdateCapturePrompt()
@@ -206,71 +288,168 @@ function OctoPort:UpdateCapturePrompt()
     self.captureFrame.progress:SetText("Krok " .. self.captureIndex .. " / " .. count .. optional)
   end
   if self.captureDefinition.required then self.captureFrame.skip:Hide() else self.captureFrame.skip:Show() end
+  self:UpdateDirectionCaptureStatus()
+end
+
+function OctoPort:BeginBindingCapture(definition, sequence, options)
+  self:CreateConfigMenu()
+  if self.IsBindingMutationLocked and self:IsBindingMutationLocked() then
+    if self.DeferBindingOperation then
+      self:DeferBindingOperation("reconcile", "Kalibrace pocka na konec boje; aktivni bindy se v boji nemeni.")
+    end
+    self:Print("Kalibraci lze spustit po boji. Zadny aktivni bind nebyl zmenen.")
+    return false
+  end
+  self:CreateCaptureOverlay()
+  options = options or {}
+
+  self.captureSingle = options.single and true or false
+  self.captureSequence = sequence
+  self.captureFaceActions = options.faces and true or false
+  self.captureDirections = options.directions and true or false
+  self.captureIncludesDirections = options.includesDirections and true or false
+  self.captureIndex = self.captureSingle and nil or 1
+  self.captureDefinition = definition
+  self.captureWorkingKeys = CopyMap(self.config.controllerKeys)
+  self.captureWorkingModifiers = CopyMap(self.config.nativeModifiers)
+  self.captureObservedIds = {}
+  self.captureObservedKeys = {}
+  self.captureDisplacedIds = {}
+  self.captureAwaitRelease = nil
+  self.captureAwaitReleaseRaw = nil
+  self.bindingCaptureActive = true
+
+  -- CONFIG and PLAY each own temporary bindings. Capture owns neither, so a
+  -- key being calibrated cannot also move the character or activate a button.
+  if self.DeactivateConfigNavigationBindings then self:DeactivateConfigNavigationBindings() end
+  if self.sessionBindingsActive and self.DeactivateSessionBindings then self:DeactivateSessionBindings() end
+  self.configFrame:Hide()
+  self:UpdateCapturePrompt()
+  self.captureFrame:Show()
+  return true
 end
 
 function OctoPort:StartBindingWizard()
-  self:CreateConfigMenu()
-  self:CreateCaptureOverlay()
-  self.captureSingle = false
-  self.captureSequence = nil
-  self.captureFaceActions = nil
-  self.captureDirections = nil
-  self.captureIndex = 1
-  self.captureDefinition = self.bindingDefinitions[1]
-  self.bindingCaptureActive = true
-  if self.sessionBindingsActive and self.DeactivateSessionBindings then self:DeactivateSessionBindings() end
-  self.configFrame:Hide()
-  self:UpdateCapturePrompt()
-  self.captureFrame:Show()
+  return self:BeginBindingCapture(self.bindingDefinitions[1], nil, { includesDirections = true })
 end
 
 function OctoPort:StartFaceBindingWizard()
-  self:CreateConfigMenu()
-  self:CreateCaptureOverlay()
-  self.captureSingle = false
-  self.captureSequence = { "A", "B", "X", "Y" }
-  self.captureFaceActions = true
-  self.captureDirections = nil
-  self.captureIndex = 1
-  self.captureDefinition = self:GetBindingDefinition(self.captureSequence[1])
-  self.bindingCaptureActive = true
-  if self.sessionBindingsActive and self.DeactivateSessionBindings then self:DeactivateSessionBindings() end
-  self.configFrame:Hide()
-  self:UpdateCapturePrompt()
-  self.captureFrame:Show()
+  local sequence = { "A", "B", "X", "Y" }
+  return self:BeginBindingCapture(self:GetBindingDefinition(sequence[1]), sequence, { faces = true })
 end
 
 function OctoPort:StartDirectionalBindingWizard()
-  self:CreateConfigMenu()
-  self:CreateCaptureOverlay()
-  self.captureSingle = false
-  self.captureSequence = { "LSUP", "LSDOWN", "LSLEFT", "LSRIGHT", "DUP", "DDOWN", "DLEFT", "DRIGHT" }
-  self.captureDirections = true
-  self.captureFaceActions = nil
-  self.captureIndex = 1
-  self.captureDefinition = self:GetBindingDefinition(self.captureSequence[1])
-  self.bindingCaptureActive = true
-  if self.sessionBindingsActive and self.DeactivateSessionBindings then self:DeactivateSessionBindings() end
-  self.configFrame:Hide()
-  self:UpdateCapturePrompt()
-  self.captureFrame:Show()
+  local sequence = { "LSUP", "LSDOWN", "LSLEFT", "LSRIGHT", "DUP", "DDOWN", "DLEFT", "DRIGHT" }
+  return self:BeginBindingCapture(self:GetBindingDefinition(sequence[1]), sequence, {
+    directions = true,
+    includesDirections = true,
+  })
 end
 
 function OctoPort:StartSingleBinding(definition)
-  self:CreateCaptureOverlay()
-  self.captureSingle = true
-  self.captureSequence = nil
-  self.captureFaceActions = nil
-  self.captureDirections = nil
-  self.captureIndex = nil
-  self.captureDefinition = definition
-  self.bindingCaptureActive = true
-  if self.sessionBindingsActive and self.DeactivateSessionBindings then self:DeactivateSessionBindings() end
-  self:UpdateCapturePrompt()
-  self.captureFrame:Show()
+  return self:BeginBindingCapture(definition, nil, {
+    single = true,
+    includesDirections = definition and directionCaptureIds[definition.id],
+  })
+end
+
+function OctoPort:StageCapturedKey(definition, key)
+  if not definition or not key then return false, "Neznamy vstup." end
+  local keys = self.captureWorkingKeys
+  local modifiers = self.captureWorkingModifiers
+  local displaced = nil
+  local faceAction = definition.id == "A" or definition.id == "B" or definition.id == "X" or definition.id == "Y"
+
+  if not definition.layer and (directionCaptureIds[definition.id] or faceAction) and string.find(key, "-", 1, true) then
+    return false, definition.label .. " musi vysilat jednu klavesu bez SHIFT/CTRL/ALT."
+  end
+
+  if definition.layer then
+    if not IsModifierKey(key) then
+      return false, definition.label .. " musi vysilat SHIFT, CTRL nebo ALT."
+    end
+    local previousLayer = modifiers[key]
+    if previousLayer and previousLayer ~= definition.layer then
+      local previousId = previousLayer == "lt" and "LT" or "RT"
+      if self.captureObservedIds[previousId] then
+        return false, key .. " uz byl zachycen pro druhou akcni vrstvu."
+      end
+      modifiers[key] = nil
+      displaced = previousId
+      self.captureDisplacedIds[previousId] = true
+    end
+    for modifier, layer in pairs(modifiers) do
+      if layer == definition.layer then modifiers[modifier] = nil end
+    end
+    for id, configuredKey in pairs(keys) do
+      if configuredKey == key then
+        if self.captureObservedIds[id] then
+          return false, key .. " uz byl zachycen pro " .. id .. "."
+        end
+        keys[id] = nil
+        displaced = id
+        self.captureDisplacedIds[id] = true
+      end
+    end
+    modifiers[key] = definition.layer
+  else
+    if IsModifierKey(key) and modifiers[key] then
+      return false, key .. " uz ovlada akcni vrstvu."
+    end
+    local capturedOwner = self.captureObservedKeys[key]
+    if capturedOwner and capturedOwner ~= definition.id then
+      local previous = self:GetBindingDefinition(capturedOwner)
+      return false, key .. " uz byl zachycen pro " .. (previous and previous.label or capturedOwner) .. "."
+    end
+    for id, configuredKey in pairs(keys) do
+      if configuredKey == key and id ~= definition.id then
+        if self.captureObservedIds[id] then
+          local previous = self:GetBindingDefinition(id)
+          return false, key .. " uz byl zachycen pro " .. (previous and previous.label or id) .. "."
+        end
+        keys[id] = nil
+        displaced = id
+        self.captureDisplacedIds[id] = true
+      end
+    end
+    keys[definition.id] = key
+  end
+
+  if displaced then self.captureDisplacedIds[displaced] = true end
+  self.captureObservedIds[definition.id] = true
+  self.captureObservedKeys[key] = definition.id
+  return true, displaced
+end
+
+function OctoPort:CommitBindingCapture()
+  if not self.captureWorkingKeys or not self.captureWorkingModifiers then return false end
+  self.config.controllerKeys = self.captureWorkingKeys
+  self.config.nativeModifiers = self.captureWorkingModifiers
+  if self.controlSchemaVersion then self.config.controlSchemaVersion = self.controlSchemaVersion end
+  self.config.directionVerifiedKeys = self.config.directionVerifiedKeys or {}
+
+  for id in pairs(self.captureDisplacedIds or {}) do
+    if directionCaptureIds[id] then self.config.directionVerifiedKeys[id] = nil end
+  end
+  for id in pairs(self.captureObservedIds or {}) do
+    if directionCaptureIds[id] then
+      self.config.directionVerifiedKeys[id] = self.config.controllerKeys[id]
+    end
+  end
+
+  self.config.lastBindingCollision = nil
+  if self.RefreshSetupState then self:RefreshSetupState() end
+  return true
 end
 
 function OctoPort:StopBindingCapture(completed)
+  local capturedSingle = completed and self.captureSingle
+  local capturedDefinition = self.captureDefinition
+  if completed then self:CommitBindingCapture() end
+  if not completed and self.config then
+    self.config.lastBindingCollision = nil
+    if self.RefreshSetupState then self:RefreshSetupState() end
+  end
   if completed then
     self.config.arrowMovementFallback = false
     self.config.menuOnlyMode = false
@@ -286,14 +465,26 @@ function OctoPort:StopBindingCapture(completed)
   self.captureSequence = nil
   self.captureFaceActions = nil
   self.captureDirections = nil
+  self.captureIncludesDirections = nil
+  self.captureWorkingKeys = nil
+  self.captureWorkingModifiers = nil
+  self.captureObservedIds = nil
+  self.captureObservedKeys = nil
+  self.captureDisplacedIds = nil
+  self.captureAwaitRelease = nil
+  self.captureAwaitReleaseRaw = nil
   if self.captureFrame then self.captureFrame:Hide() end
-  if self.config.enabled and self.ActivateSessionBindings then self:ActivateSessionBindings() end
-  self:ShowConfigTab(completed and 4 or 2, true)
+  self:RestoreGameplayAfterModal()
+  local returnTab = 2
+  if capturedDirections then returnTab = 1 elseif completed and not capturedSingle then returnTab = 4 end
+  self:ShowConfigTab(returnTab, true)
   if completed then
     if capturedFaces then
       self:Print("ABXY captured: physical A/B/X/Y now activate native action slots 1/2/3/4.")
     elseif capturedDirections then
       self:Print("Stick and D-pad calibrated as eight separate inputs. Base D-pad now targets; LT/RT + D-pad use action slots.")
+    elseif capturedSingle then
+      self:Print((capturedDefinition and capturedDefinition.label or "Input") .. " saved. The previous action will be restored when Controller is disabled.")
     else
       self:Print("Controller wizard complete. Press every control once in Diagnostics.")
     end
@@ -302,7 +493,7 @@ end
 
 function OctoPort:AdvanceCaptureStep()
   if self.captureSingle then
-    self:StopBindingCapture(false)
+    self:StopBindingCapture(true)
     return
   end
 
@@ -327,36 +518,42 @@ end
 
 function OctoPort:CaptureControllerKey(raw)
   if not self.bindingCaptureActive or not self.captureDefinition then return end
+  if self.captureAwaitRelease then return end
   local key = ComposeKey(raw)
   if not key or key == "UNKNOWN" then return end
 
-  -- Do not silently turn a stick direction into a D-pad action (or the other
-  -- way around). A duplicate signal means the device profile must be fixed.
-  for id, configuredKey in pairs(self.config.controllerKeys or {}) do
-    if configuredKey == key and id ~= self.captureDefinition.id then
-      local previous = self:GetBindingDefinition(id)
-      self.config.lastBindingCollision = {
-        key = key,
-        previous = id,
-        current = self.captureDefinition.id,
-      }
-      self.captureFrame.progress:SetText("|cffff5555KOLIZE: " .. key .. " uz pouziva " .. (previous and previous.label or id) .. ". Nastav v Armoury Crate jinou klavesu.|r")
-      self:RefreshBindingMenu()
-      return
-    end
-  end
-
-  if not self:BindControllerKey(self.captureDefinition, key) then
-    self.captureFrame.progress:SetText("|cffff5555WoW tuto vazbu odmitl. Zkus jine tlacitko nebo klavesu.|r")
+  local accepted, detail = self:StageCapturedKey(self.captureDefinition, key)
+  if not accepted then
+    self.config.lastBindingCollision = {
+      key = key,
+      previous = (self.captureObservedKeys and self.captureObservedKeys[key]) or "DEVICE",
+      current = self.captureDefinition.id,
+    }
+    self.captureFrame.progress:SetText("|cffff5555KOLIZE: " .. detail .. " Vysli z ovladace jiny signal.|r")
     return
   end
 
   self:SignalInput(self.captureDefinition.id, "captured")
+  self.captureAwaitRelease = key
+  self.captureAwaitReleaseRaw = NormalizeReleasedKey(raw)
+  self.captureFrame.progress:SetText("|cff4df273ZACHYCENO: " .. key .. "|r  -  uvolni ovladac pro dalsi krok")
+  self:UpdateDirectionCaptureStatus()
+end
+
+function OctoPort:ReleaseCapturedKey(raw)
+  if not self.bindingCaptureActive or not self.captureAwaitRelease then return end
+  local released = NormalizeReleasedKey(raw)
+  if released ~= self.captureAwaitReleaseRaw then return end
+  self.captureAwaitRelease = nil
+  self.captureAwaitReleaseRaw = nil
   self:AdvanceCaptureStep()
 end
 
 function OctoPort:RefreshBindingMenu()
   if not self.bindingRows or not self.config then return end
+  if self.enableControllerButton then
+    self.enableControllerButton:SetText(self.config.enabled and "VYPNOUT A OBNOVIT BINDY" or "ZAPNOUT BEZPECNE")
+  end
   local complete = true
   for index = 1, table.getn(self.bindingDefinitions) do
     local definition = self.bindingDefinitions[index]
@@ -365,8 +562,15 @@ function OctoPort:RefreshBindingMenu()
     if row then
       row.keyButton:SetText(key or "NASTAVIT")
       if key then
-        row.status:SetText("OK")
-        row.status:SetTextColor(0.30, 0.95, 0.45)
+        local isDirection = self.IsDirectionControl and self:IsDirectionControl(definition)
+        local isVerified = not isDirection or (self.IsDirectionVerified and self:IsDirectionVerified(definition))
+        if isVerified then
+          row.status:SetText(isDirection and "LIVE" or "OK")
+          row.status:SetTextColor(0.30, 0.95, 0.45)
+        else
+          row.status:SetText("TEST")
+          row.status:SetTextColor(1.00, 0.72, 0.22)
+        end
       else
         row.status:SetText("--")
         row.status:SetTextColor(1.0, 0.35, 0.25)
@@ -377,7 +581,13 @@ function OctoPort:RefreshBindingMenu()
 
   if self.setupStatus then
     local collision = self.config.lastBindingCollision
-    if collision then
+    local deferred, deferredStatus = false, nil
+    if self.GetBindingOperationStatus then
+      deferred, deferredStatus = self:GetBindingOperationStatus()
+    end
+    if deferred then
+      self.setupStatus:SetText("|cffffb83dCEKA NA KONEC BOJE: " .. (deferredStatus or "bindy se potom bezpecne obnovi") .. "|r")
+    elseif collision then
       local previous = self:GetBindingDefinition(collision.previous)
       local current = self:GetBindingDefinition(collision.current)
       self.setupStatus:SetText("|cffff6655KOLIZE " .. collision.key .. ": " .. (previous and previous.label or collision.previous) .. " / " .. (current and current.label or collision.current) .. "|r")
@@ -406,7 +616,9 @@ local function RawInputMatch(key)
   -- Show modified input as the actual controller combination. This makes the
   -- raw tester useful for verifying all 16 LT/RT layer actions, not just the
   -- unmodified physical buttons.
-  local modifier, baseKey = string.match(key, "^(%u+)%-(.+)$")
+  -- WoW 1.12 embeds Lua 5.0, where string.match does not exist. string.find
+  -- returns the same captures here and keeps RAW TEST usable on the real client.
+  local _, _, modifier, baseKey = string.find(key, "^(%u+)%-(.+)$")
   local layer = modifier and native[modifier]
   if layer and baseKey then
     for index = 1, table.getn(OctoPort.bindingDefinitions) do
@@ -528,6 +740,10 @@ function OctoPort:CreateRawInputTest()
     OctoPort.rawCursorX = x
     OctoPort.rawCursorY = y
   end)
+  frame:SetScript("OnHide", function()
+    OctoPort.rawInputTestActive = false
+    OctoPort:RestoreGameplayAfterModal()
+  end)
 
   frame.last = last
   frame.warning = warning
@@ -537,7 +753,17 @@ function OctoPort:CreateRawInputTest()
 end
 
 function OctoPort:StartRawInputTest()
+  if self.IsBindingMutationLocked and self:IsBindingMutationLocked() then
+    if self.DeferBindingOperation then
+      self:DeferBindingOperation("reconcile", "RAW test pocka na konec boje; aktivni bindy se v boji nemeni.")
+    end
+    self:Print("RAW test lze spustit po boji. Zadny aktivni bind nebyl zmenen.")
+    return false
+  end
   self:CreateRawInputTest()
+  self.rawInputTestActive = true
+  if self.DeactivateConfigNavigationBindings then self:DeactivateConfigNavigationBindings() end
+  if self.sessionBindingsActive and self.DeactivateSessionBindings then self:DeactivateSessionBindings() end
   if self.configFrame then self.configFrame:Hide() end
   self.rawInputHistory = {}
   self.lastRawInputKey = nil
@@ -546,6 +772,7 @@ function OctoPort:StartRawInputTest()
   self.rawTestFrame.warning:SetText("Leva packa musi ukazat W/S/A/D. D-pad musi ukazat sipky nebo ctyri jine samostatne klavesy.")
   self.rawCursorX, self.rawCursorY = GetCursorPosition()
   self.rawTestFrame:Show()
+  return true
 end
 
 function OctoPort:UpdateInputDiagnostics()
@@ -577,6 +804,11 @@ function OctoPort:UpdateInputDiagnostics()
       row:SetBackdropBorderColor(0.78, 0.52, 0.18, 0.90)
       row.state:SetText("SYSTEM")
       row.state:SetTextColor(1.00, 0.68, 0.25)
+    elseif active then
+      row:SetBackdropColor(0.04, 0.38, 0.28, 0.98)
+      row:SetBackdropBorderColor(0.30, 1.00, 0.62, 1)
+      row.state:SetText("SIGNAL")
+      row.state:SetTextColor(0.30, 1.00, 0.62)
     elseif (row.nativeMovement or row.nativeAction or (self.config.nativeFaceButtons and (row.id == "A" or row.id == "B" or row.id == "X" or row.id == "Y"))) and self:GetControllerBindingKey(row.id) then
       row:SetBackdropColor(0.04, 0.18, 0.34, 0.98)
       row:SetBackdropBorderColor(0.28, 0.62, 1.00, 1)
@@ -587,11 +819,6 @@ function OctoPort:UpdateInputDiagnostics()
       row:SetBackdropBorderColor(0.28, 0.62, 1.00, 1)
       row.state:SetText("PASS")
       row.state:SetTextColor(0.38, 0.72, 1.00)
-    elseif active then
-      row:SetBackdropColor(0.04, 0.38, 0.28, 0.98)
-      row:SetBackdropBorderColor(0.30, 1.00, 0.62, 1)
-      row.state:SetText("SIGNAL")
-      row.state:SetTextColor(0.30, 1.00, 0.62)
     else
       row:SetBackdropColor(0.025, 0.04, 0.055, 0.94)
       row:SetBackdropBorderColor(0.40, 0.48, 0.52, 0.85)
@@ -629,6 +856,8 @@ local function BuildSetupPanel(panel)
 
   local status = MakeLabel(panel, "GameFontNormal", "")
   status:SetPoint("TOPLEFT", body, "BOTTOMLEFT", 0, -24)
+  status:SetWidth(470)
+  status:SetJustifyH("LEFT")
   OctoPort.setupStatus = status
 
   local wizard = AddFocusable(panel, MakeButton(panel, "SPUSTIT PRUVODCE", 180, function()
@@ -646,7 +875,7 @@ local function BuildSetupPanel(panel)
   end))
   rawTest:SetPoint("LEFT", controls, "RIGHT", 10, 0)
 
-  local preset = AddFocusable(panel, MakeButton(panel, "ROG ALLY PROFIL", 150, function()
+  local preset = AddFocusable(panel, MakeButton(panel, "VYCHOZI PROFIL", 150, function()
     OctoPort:ApplyRecommendedBindings()
   end))
   preset:SetPoint("TOPLEFT", wizard, "BOTTOMLEFT", 0, -12)
@@ -671,9 +900,10 @@ local function BuildSetupPanel(panel)
     this:SetText(OctoPort.config.enabled and "VYPNOUT A OBNOVIT BINDY" or "ZAPNOUT BEZPECNE")
   end))
   enable:SetPoint("LEFT", restore, "RIGHT", 10, 0)
+  OctoPort.enableControllerButton = enable
 
   local note = MakeLabel(panel, "GameFontDisableSmall",
-    "Vychozi univerzalni profil: L-stick W/A/S/D, D-pad sipky, LT SHIFT, RT CTRL, ABXY 1/2/3/4, LB/RB skutecne mouse BUTTON1/BUTTON2. Osm smeru musi byt osm ruznych signalu; addon se pri kolizi nezapne. M1/M2 musi byt samostatna tlacitka, ne Secondary Function.", 470)
+    "Vychozi profil jen predvyplni ocekavane klavesy. Pred zapnutim musi KALIBROVAT 8 SMERU skutecne zachytit osm rozdilnych signalu. L-stick a D-pad nelze rozlisit, pokud oba fyzicky vysilaji stejnou klavesu.", 470)
   note:SetPoint("TOPLEFT", restore, "BOTTOMLEFT", 0, -18)
   note:SetJustifyH("LEFT")
 
@@ -706,8 +936,9 @@ local function BuildControlsPanel(panel)
     label:SetJustifyH("LEFT")
 
     local keyButton = AddFocusable(panel, MakeButton(row, "", 104, function()
-      OctoPort:StartSingleBinding(definition)
+      OctoPort:StartSingleBinding(this.bindingDefinition)
     end))
+    keyButton.bindingDefinition = definition
     keyButton:SetPoint("LEFT", label, "RIGHT", 4, 0)
 
     local status = MakeLabel(row, "GameFontNormalSmall", "--", 22)
@@ -745,8 +976,7 @@ local function BuildGameplayPanel(panel)
   hud:SetPoint("TOPLEFT", autoQuest, "BOTTOMLEFT", 0, -10)
 
   local editBars = AddFocusable(panel, MakeButton(panel, "UPRAVIT 20 AKCI", 200, function()
-    OctoPort.config.editMode = not OctoPort.config.editMode
-    OctoPort:UpdateLayer(true)
+    OctoPort:SetActionEditMode(not OctoPort.config.editMode)
     OctoPort.configFrame:Hide()
   end))
   editBars:SetPoint("TOPLEFT", hud, "BOTTOMLEFT", 0, -10)
@@ -942,9 +1172,9 @@ function OctoPort:CreateConfigMenu()
     if OctoPort.ActivateConfigNavigationBindings then OctoPort:ActivateConfigNavigationBindings() end
   end)
   frame:SetScript("OnHide", function()
-    if not OctoPort.bindingCaptureActive and OctoPort.config and OctoPort.config.enabled and OctoPort.ActivateSessionBindings then
-      OctoPort:ActivateSessionBindings()
-    end
+    if OctoPort.bindingCaptureActive or OctoPort.rawInputTestActive then return end
+    if OctoPort.DeactivateConfigNavigationBindings then OctoPort:DeactivateConfigNavigationBindings() end
+    OctoPort:RestoreGameplayAfterModal()
   end)
 
   self.configFrame = frame
