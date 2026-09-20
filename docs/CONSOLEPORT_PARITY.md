@@ -8,7 +8,7 @@ the current OctoLauncher entry expects one addon TOC in the repository root.
 
 ## Compatibility decision
 
-| ConsolePort area | 1.12 implementation | Status after 0.9.0 |
+| ConsolePort area | 1.12 implementation | Status after 0.9.1 |
 |---|---|---|
 | Controller setup | Capture keyboard/mouse signals produced by Armoury Crate | Safe session-only setup |
 | Character movement | Four left-stick key signals bound directly to Blizzard movement commands | Implemented; protected-Lua-free, session-only and reversible |
@@ -24,17 +24,18 @@ the current OctoLauncher entry expects one addon TOC in the repository root.
 | Unit-frame control | Explicit party/raid focus graph | Planned; no global unit-frame hooks |
 | Loot control | Controller focus and loot actions | Planned; current cursor placement remains opt-in |
 | Quest control | Confirm/back and optional displayed-quest acceptance | Partial, opt-in |
-| Device calibration | Persistent minimap entry, raw tester, duplicate-signal warnings and focused ABXY capture | Implemented for keyboard/mouse emulation |
+| Device calibration | Persistent minimap entry, raw tester, atomic live eight-direction calibration and focused ABXY capture | Implemented for keyboard/mouse emulation; identical hardware signals are rejected |
 
 ## Non-negotiable safety rules
 
 1. Fresh install is inert until explicitly enabled.
 2. Normal setup/play never calls `SaveBindings`.
-3. Every temporary binding has an exact session backup and restoration path.
-4. No replacement of Blizzard global functions.
-5. No reparenting or script replacement on Blizzard/unit frames.
-6. Features that change gameplay state are separately opt-in.
-7. Each compatibility module needs a WoW 1.12 API test and a ROG Ally hardware
+3. Every temporary binding has an exact persisted baseline and restoration path, including combat `/reload` recovery.
+4. No binding mutation runs during combat lockdown; pending state is reconciled after combat.
+5. No replacement of Blizzard global functions.
+6. No reparenting or script replacement on Blizzard/unit frames.
+7. Features that change gameplay state are separately opt-in.
+8. Each compatibility module needs a WoW 1.12 API test and a ROG Ally hardware
    test before it is enabled by default.
 
 ## Upstream and licensing

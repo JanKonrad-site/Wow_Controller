@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.9.1
+
+- Replaced destructive per-step direction remapping with an atomic eight-input calibration that commits only after all physical signals are unique.
+- Added key-release gating so a held analog direction cannot repeat into the following wizard step.
+- Fixed remapping and swapping keys that were still owned by the previous profile.
+- Added live direction verification; presets and migrated defaults no longer masquerade as tested hardware input.
+- Added a separate reversible settings-navigation binding scope, keeping D-pad and A/B usable while gameplay is off or invalid.
+- Fixed controller navigation in the radial editor while gameplay is OFF and guaranteed exact restoration on every close path.
+- Guarded every binding mutation against combat lockdown and deferred the requested state until `PLAYER_REGEN_ENABLED`, preventing protected Blizzard UI action warnings.
+- Reconciled deferred layers in deterministic baseline → gameplay → visible-menu order after combat.
+- Persisted the pre-addon binding baseline before temporary changes, so a combat `/reload` can recover the exact original keys before any new controller session starts.
+- Snapshotted both key slots of every touched source and destination command, so temporary assignments cannot lose an existing secondary binding.
+- Guarded radial, dialog and automatic quest actions during combat instead of asking the protected Blizzard UI to execute them.
+- Prevented gameplay bindings from being reinstalled underneath the capture and raw-test overlays.
+- Fixed login and modal-close failure paths so a rejected binding cannot leave a visible but inactive HUD.
+- Made the 20-slot action editor visible, clickable and immediately refreshed while gameplay is disabled.
+- Rebuilt the HUD with separate header/content/footer bands, fixed target D-pad geometry and editor row spacing, and added a visible **HOTOVO** editor control.
+- Added passive `PLAYER_TARGET_CHANGED` feedback so native D-pad targeting is reflected immediately in the HUD without replacing Blizzard's target commands.
+- Removed the last Lua targeting fallback; D-pad gameplay now uses only Blizzard's native `TARGET*` bindings.
+- Replaced LT/RT movement aliases—which could exceed Vanilla's two-key-per-command limit and evict W/A/S/D—with reversible clearing of modifier chords so they fall through to base movement and restore exactly on disable.
+- Replaced the Lua 5.1-only `string.match` call so RAW TEST runs on the client’s Lua 5.0 runtime.
+- Added a real Core + Bindings + Menu integration harness and expanded regressions for invalid-profile recovery, exact restoration, calibration swaps, duplicate signals, held inputs and offline action editing.
+
 ## 0.9.0
 
 - Split the left stick and D-pad into a validated eight-signal profile; controller activation now fails safely on a duplicate or missing direction.

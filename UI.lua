@@ -19,10 +19,10 @@ local actionDpadLayout = {
 }
 
 local targetLayout = {
-  { direction = "up",    x = -128, y =  40, glyph = "^", caption = "PRATEL -" },
-  { direction = "right", x =  -88, y =   0, glyph = ">", caption = "NEPRITEL +" },
-  { direction = "down",  x = -128, y = -40, glyph = "v", caption = "PRATEL +" },
-  { direction = "left",  x = -168, y =   0, glyph = "<", caption = "NEPRITEL -" },
+  { direction = "up",    x =   0, y =  40, glyph = "^", caption = "PRATEL -" },
+  { direction = "right", x =  40, y =   0, glyph = ">", caption = "NEPRITEL +" },
+  { direction = "down",  x =   0, y = -40, glyph = "v", caption = "PRATEL +" },
+  { direction = "left",  x = -40, y =   0, glyph = "<", caption = "NEPRITEL -" },
 }
 
 local layerDefinitions = {
@@ -39,6 +39,18 @@ layerDefinitions.rt.controls = layeredControls
 
 local actionIndices = { A = 1, B = 2, X = 3, Y = 4, DUP = 5, DRIGHT = 6, DDOWN = 7, DLEFT = 8 }
 local faceByNumber = { "A", "B", "X", "Y" }
+
+-- The HUD is split into explicit header, content, and footer bands. The old
+-- 158px frame centered the controls beneath its labels, so target captions
+-- and the editor's third row overlapped text and buttons.
+local hudLayout = {
+  width = 510,
+  normalHeight = 206,
+  normalContentY = -3,
+  editorHeight = 520,
+  editorMinimumY = 270,
+  editorPositions = { base = 142, lt = 0, rt = -142 },
+}
 
 local function MakeText(parent, template, text)
   local label = parent:CreateFontString(nil, "OVERLAY", template)
@@ -66,6 +78,16 @@ local function CursorCarriesAction()
   return false
 end
 
+local function CanEditActionSlots()
+  local locked = (InCombatLockdown and InCombatLockdown()) or
+    (UnitAffectingCombat and UnitAffectingCombat("player"))
+  if locked then
+    if OctoPort.SetEditorStatus then OctoPort:SetEditorStatus("V BOJI NELZE MENIT AKCE", true) end
+    return false
+  end
+  return true
+end
+
 local function CreateMirrorButton(parent, data)
   local button = CreateFrame("Button", nil, parent)
   button:SetWidth(42)
@@ -73,6 +95,7 @@ local function CreateMirrorButton(parent, data)
   button:SetPoint("CENTER", parent, "CENTER", data.x, data.y)
   button:RegisterForClicks("LeftButtonUp", "RightButtonUp")
   button:RegisterForDrag("LeftButton")
+  button:EnableMouse(false)
   MakeBackdrop(button, data.red, data.green, data.blue)
 
   local icon = button:CreateTexture(nil, "ARTWORK")
@@ -105,17 +128,30 @@ local function CreateMirrorButton(parent, data)
   end)
   button:SetScript("OnLeave", function() GameTooltip:Hide() end)
   button:SetScript("OnDragStart", function()
-    if OctoPort.config and OctoPort.config.editMode and this.action and PickupAction then PickupAction(this.action) end
+    if not OctoPort.config or not OctoPort.config.editMode or not this.action or not CanEditActionSlots() then return end
+    if PickupAction then
+      PickupAction(this.action)
+      OctoPort:SetEditorStatus("SLOT " .. this.action .. " JE NA KURZORU")
+    end
   end)
   button:SetScript("OnReceiveDrag", function()
-    if OctoPort.config and OctoPort.config.editMode and this.action and PlaceAction then PlaceAction(this.action) end
+    if not OctoPort.config or not OctoPort.config.editMode or not this.action or not CursorCarriesAction() or not CanEditActionSlots() then return end
+    if PlaceAction then
+      PlaceAction(this.action)
+      OctoPort:SetEditorStatus("AKCE PRIRAZENA DO SLOTU " .. this.action)
+      OctoPort:UpdateActionMirrors(true)
+    end
   end)
   button:SetScript("OnClick", function()
     if not OctoPort.config or not OctoPort.config.editMode or not this.action then return end
-    if arg1 == "RightButton" or not CursorCarriesAction() then
-      if PickupAction then PickupAction(this.action) end
-    elseif PlaceAction then
+    if not CanEditActionSlots() then return end
+    if CursorCarriesAction() and arg1 ~= "RightButton" and PlaceAction then
       PlaceAction(this.action)
+      OctoPort:SetEditorStatus("AKCE PRIRAZENA DO SLOTU " .. this.action)
+      OctoPort:UpdateActionMirrors(true)
+    elseif arg1 == "RightButton" and PickupAction then
+      PickupAction(this.action)
+      OctoPort:SetEditorStatus("SLOT " .. this.action .. " JE NA KURZORU")
     end
   end)
   return button
@@ -123,9 +159,10 @@ end
 
 local function CreateTargetPad(parent)
   local pad = CreateFrame("Frame", "OctoPortTargetPad", parent)
-  pad:SetWidth(210)
-  pad:SetHeight(100)
-  pad:SetPoint("CENTER", parent, "CENTER", 0, 0)
+  -- Include the four captions in the declared bounds, not only the nodes.
+  pad:SetWidth(232)
+  pad:SetHeight(140)
+  pad:SetPoint("CENTER", parent, "CENTER", -130, 0)
 
   for index = 1, table.getn(targetLayout) do
     local data = targetLayout[index]
@@ -144,11 +181,14 @@ local function CreateTargetPad(parent)
       caption:SetPoint("BOTTOM", node, "TOP", 0, 1)
     elseif data.direction == "down" then
       caption:SetPoint("TOP", node, "BOTTOM", 0, -1)
-    else
+    elseif data.direction == "right" then
       caption:SetPoint("LEFT", node, "RIGHT", 3, 0)
+    else
+      caption:SetPoint("RIGHT", node, "LEFT", -3, 0)
     end
 
     node.direction = data.direction
+    node.captionText = caption
     pad[index] = node
   end
 
@@ -183,8 +223,8 @@ function OctoPort:CreateRoot()
 
   self.layers = {}
   local root = CreateFrame("Frame", "OctoPortHUD", UIParent)
-  root:SetWidth(430)
-  root:SetHeight(158)
+  root:SetWidth(hudLayout.width)
+  root:SetHeight(hudLayout.normalHeight)
   root:SetFrameStrata("MEDIUM")
   root:SetClampedToScreen(true)
   root:SetMovable(true)
@@ -224,27 +264,44 @@ function OctoPort:CreateRoot()
   active:SetPoint("TOP", title, "BOTTOM", 0, -2)
 
   local hint = MakeText(root, "GameFontDisableSmall", "D-PAD = CILE   LT/RT = 8 AKCI   MENU = KOLO")
-  hint:SetPoint("BOTTOM", root, "BOTTOM", 0, 7)
+  hint:SetPoint("BOTTOM", root, "BOTTOM", 0, 9)
 
   local settings = CreateFrame("Button", nil, root, "UIPanelButtonTemplate")
   settings:SetWidth(32)
   settings:SetHeight(20)
   settings:SetPoint("TOPRIGHT", root, "TOPRIGHT", -8, -7)
   settings:SetText("WC")
+  settings:EnableMouse(true)
   settings:SetScript("OnClick", function()
     if OctoPort.ToggleConfig then OctoPort:ToggleConfig(true) end
   end)
 
+  local editorDone = CreateFrame("Button", nil, root, "UIPanelButtonTemplate")
+  editorDone:SetWidth(86)
+  editorDone:SetHeight(22)
+  editorDone:SetPoint("BOTTOMRIGHT", root, "BOTTOMRIGHT", -10, 7)
+  editorDone:SetText("HOTOVO")
+  editorDone:SetScript("OnClick", function()
+    if OctoPort.SetActionEditMode then OctoPort:SetActionEditMode(false) end
+  end)
+  editorDone:Hide()
+
+  local editorStatus = MakeText(root, "GameFontHighlightSmall", "")
+  editorStatus:SetPoint("BOTTOMLEFT", root, "BOTTOMLEFT", 12, 30)
+  editorStatus:SetWidth(360)
+  editorStatus:SetJustifyH("LEFT")
+  editorStatus:Hide()
+
   local targetName = MakeText(root, "GameFontHighlightSmall", "BEZ CILE")
-  targetName:SetPoint("TOPLEFT", root, "TOPLEFT", 12, -10)
-  targetName:SetWidth(105)
+  targetName:SetPoint("TOPLEFT", root, "TOPLEFT", 12, -12)
+  targetName:SetWidth(120)
   targetName:SetJustifyH("LEFT")
 
   for key, definition in pairs(layerDefinitions) do
     local layer = CreateFrame("Frame", "OctoPortLayer_" .. key, root)
-    layer:SetWidth(420)
+    layer:SetWidth(500)
     layer:SetHeight(100)
-    layer:SetPoint("CENTER", root, "CENTER", 0, 0)
+    layer:SetPoint("CENTER", root, "CENTER", 0, hudLayout.normalContentY)
     layer.buttons = {}
     for index = 1, table.getn(definition.controls) do
       local control = definition.controls[index]
@@ -264,6 +321,8 @@ function OctoPort:CreateRoot()
   self.targetNameText = targetName
   self.targetPad = CreateTargetPad(self.layers.base)
   self.settingsButton = settings
+  self.editorDoneButton = editorDone
+  self.editorStatusText = editorStatus
 
   root:SetScript("OnUpdate", function()
     OctoPort.updateElapsed = (OctoPort.updateElapsed or 0) + arg1
@@ -288,13 +347,14 @@ function OctoPort:GetActiveLayer()
   return "base"
 end
 
-function OctoPort:UpdateActionMirrors()
-  if not self.layers or not self.config or not self.config.enabled then return end
+function OctoPort:UpdateActionMirrors(force)
+  if not self.layers or not self.config then return end
+  if not self.config.enabled and not self.config.editMode and not self.config.moveMode and not force then return end
   for layerName, layer in pairs(self.layers) do
     for control, button in pairs(layer.buttons) do
       local action = self:GetActionSlot(layerName, control)
       button.action = action
-      local texture = GetActionTexture(action)
+      local texture = action and GetActionTexture(action)
       if texture then
         button.icon:SetTexture(texture)
         button.icon:SetVertexColor(1, 1, 1)
@@ -303,18 +363,29 @@ function OctoPort:UpdateActionMirrors()
         button.icon:SetVertexColor(0.35, 0.38, 0.42)
       end
 
-      local usable = IsUsableAction(action)
-      local inRange = IsActionInRange(action)
+      local usable = action and IsUsableAction(action)
+      local inRange = action and IsActionInRange(action)
       if (usable == nil or usable == 0) or inRange == 0 then
         button.shade:SetVertexColor(0, 0, 0, 0.62)
       else
         button.shade:SetVertexColor(0, 0, 0, 0)
       end
 
-      local count = GetActionCount(action) or 0
+      local count = action and GetActionCount(action) or 0
       button.count:SetText(count > 1 and count or "")
     end
   end
+end
+
+function OctoPort:SetEditorStatus(message, isError)
+  if not self.editorStatusText then return end
+  self.editorStatusText:SetText(message or "")
+  if isError then
+    self.editorStatusText:SetTextColor(1.0, 0.30, 0.22)
+  else
+    self.editorStatusText:SetTextColor(0.30, 0.95, 0.72)
+  end
+  if self.config and self.config.editMode then self.editorStatusText:Show() end
 end
 
 function OctoPort:HandleControllerAction(slot, keystate)
@@ -325,33 +396,56 @@ function OctoPort:HandleControllerAction(slot, keystate)
   -- legacy handler remains only so ABXY can navigate our settings panel.
 end
 
-function OctoPort:TargetChanged(direction)
-  self.targetFlashDirection = direction
-  self.targetFlashUntil = GetTime() + 0.30
+function OctoPort:TargetChanged()
+  -- Native TARGET* bindings do the targeting. We only observe the resulting
+  -- unit and pulse its target category; an event cannot reliably reveal
+  -- whether the player requested the previous or next unit.
+  if UnitExists("target") then
+    if UnitCanAttack("player", "target") then
+      self.targetFlashCategory = "hostile"
+    else
+      self.targetFlashCategory = "friendly"
+    end
+    self.targetFlashUntil = GetTime() + 0.30
+  else
+    self.targetFlashCategory = nil
+    self.targetFlashUntil = nil
+  end
   self:UpdateTargetDisplay()
 end
 
 function OctoPort:UpdateTargetDisplay()
   if not self.targetNameText then return end
-  if UnitExists("target") then
+  local targetExists = UnitExists("target")
+  local targetCategory = nil
+  if targetExists then
     local name = UnitName("target") or "CIL"
     self.targetNameText:SetText(string.upper(name))
     if UnitCanAttack("player", "target") then
+      targetCategory = "hostile"
       self.targetNameText:SetTextColor(1.0, 0.28, 0.24)
     else
+      targetCategory = "friendly"
       self.targetNameText:SetTextColor(0.30, 0.95, 0.45)
     end
   else
     self.targetNameText:SetText("BEZ CILE")
     self.targetNameText:SetTextColor(0.65, 0.68, 0.72)
+    self.targetFlashCategory = nil
+    self.targetFlashUntil = nil
   end
 
-  local activeDirection = nil
-  if self.targetFlashUntil and GetTime() < self.targetFlashUntil then activeDirection = self.targetFlashDirection end
+  local activeCategory = nil
+  if self.targetFlashUntil and GetTime() < self.targetFlashUntil and self.targetFlashCategory == targetCategory then
+    activeCategory = targetCategory
+  end
   for index = 1, table.getn(targetLayout) do
     local node = self.targetPad and self.targetPad[index]
     if node then
-      if node.direction == activeDirection then
+      local isHostileNode = node.direction == "left" or node.direction == "right"
+      local isFriendlyNode = node.direction == "up" or node.direction == "down"
+      if (activeCategory == "hostile" and isHostileNode) or
+         (activeCategory == "friendly" and isFriendlyNode) then
         node:SetBackdropBorderColor(0.24, 0.94, 0.88, 1)
       else
         node:SetBackdropBorderColor(0.72, 0.78, 0.82, 0.90)
@@ -361,33 +455,70 @@ function OctoPort:UpdateTargetDisplay()
 end
 
 function OctoPort:UpdateLayer(force)
-  if not self.root or not self.config or not self.config.enabled then return end
+  if not self.root or not self.config then return end
+  if not force and not self.config.enabled and not self.config.editMode and not self.config.moveMode then return end
   local active = self:GetActiveLayer()
   if not force and self.lastLayer == active and self.lastEditMode == self.config.editMode then return end
   self.lastLayer = active
   self.lastEditMode = self.config.editMode
 
   if self.config.editMode then
-    local positions = { base = 135, lt = 5, rt = -125 }
     for key, layer in pairs(self.layers) do
       layer:ClearAllPoints()
-      layer:SetPoint("CENTER", self.root, "CENTER", 0, positions[key])
+      layer:SetPoint("CENTER", self.root, "CENTER", 0, hudLayout.editorPositions[key])
       layer:SetAlpha(key == active and 1 or 0.72)
       layer:Show()
+      for _, button in pairs(layer.buttons) do button:EnableMouse(true) end
     end
-    self.root:SetHeight(430)
+    self.root:SetHeight(hudLayout.editorHeight)
     self.activeLayerText:SetText("20 EDITOVATELNYCH AKCI")
-    self.hintText:SetText("Pretahni schopnost na slot; pravym klikem slot zvedni")
+    self.hintText:ClearAllPoints()
+    self.hintText:SetPoint("BOTTOMLEFT", self.root, "BOTTOMLEFT", 12, 9)
+    self.hintText:SetWidth(360)
+    self.hintText:SetJustifyH("LEFT")
+    self.hintText:SetText("TAHNI AKCI NA SLOT; PRAVY KLIK = ZVEDNOUT")
+    self.hintText:Show()
+    if self.editorDoneButton then self.editorDoneButton:Show() end
+    if self.editorStatusText then self.editorStatusText:Show() end
   else
     for key, layer in pairs(self.layers) do
       layer:ClearAllPoints()
-      layer:SetPoint("CENTER", self.root, "CENTER", 0, 0)
+      layer:SetPoint("CENTER", self.root, "CENTER", 0, hudLayout.normalContentY)
       layer:SetAlpha(1)
+      for _, button in pairs(layer.buttons) do button:EnableMouse(false) end
       if key == active then layer:Show() else layer:Hide() end
     end
-    self.root:SetHeight(158)
+    self.root:SetHeight(hudLayout.normalHeight)
     self.activeLayerText:SetText(layerDefinitions[active].title)
+    self.hintText:ClearAllPoints()
+    self.hintText:SetPoint("BOTTOM", self.root, "BOTTOM", 0, 9)
+    self.hintText:SetWidth(460)
+    self.hintText:SetJustifyH("CENTER")
     self.hintText:SetText("D-PAD = CILE   LT/RT = 8 AKCI   MENU = KOLO")
+    self.hintText:Show()
+    if self.editorDoneButton then self.editorDoneButton:Hide() end
+    if self.editorStatusText then self.editorStatusText:Hide() end
+  end
+end
+
+function OctoPort:SetActionEditMode(enabled)
+  if not self.root or not self.config then return end
+  self.config.editMode = enabled and true or false
+  if self.config.editMode then
+    self.root:Show()
+    self:SetEditorStatus("PRETAHNI KOUZLO NEBO PREDMET NA SLOT")
+    self:ApplyLayout()
+    self:UpdateLayer(true)
+    self:UpdateActionMirrors(true)
+  else
+    for _, layer in pairs(self.layers or {}) do
+      for _, button in pairs(layer.buttons or {}) do button:EnableMouse(false) end
+    end
+    if self.editorDoneButton then self.editorDoneButton:Hide() end
+    if self.editorStatusText then self.editorStatusText:Hide() end
+    self:UpdateLayer(true)
+    self:SetMoveMode(self.config.moveMode)
+    if not self.config.enabled then self.root:Hide() end
   end
 end
 
@@ -396,7 +527,7 @@ function OctoPort:ApplyLayout()
   self.root:SetScale(self.config.scale or 1)
   self.root:ClearAllPoints()
   local y = self.config.y or 122
-  if self.config.editMode and y < 220 then y = 220 end
+  if self.config.editMode and y < hudLayout.editorMinimumY then y = hudLayout.editorMinimumY end
   self.root:SetPoint("CENTER", UIParent, "BOTTOM", self.config.x or 0, y)
   self:SetMoveMode(self.config.moveMode)
 end
@@ -404,13 +535,17 @@ end
 function OctoPort:SetMoveMode(enabled)
   if not self.root then return end
   self.config.moveMode = enabled and true or false
-  self.root:EnableMouse(self.config.moveMode)
+  self.root:EnableMouse(self.config.moveMode or self.config.editMode)
   if self.config.moveMode then
+    self.root:Show()
+    self:UpdateLayer(true)
+    self:UpdateActionMirrors(true)
     self.background:SetBackdropBorderColor(1.0, 0.65, 0.15, 1)
     self.activeLayerText:SetText("TAHNI MYSI")
   else
     self.background:SetBackdropBorderColor(0.18, 0.75, 0.72, 0.75)
     self:UpdateLayer(true)
+    if not self.config.enabled and not self.config.editMode then self.root:Hide() end
   end
 end
 
@@ -426,7 +561,7 @@ function OctoPort:SetUIEnabled(enabled)
     self:ApplyLayout()
     self:UpdateLayer(true)
     self:UpdateActionMirrors()
-  else
+  elseif not self.config.editMode and not self.config.moveMode then
     self.root:Hide()
     if self.radialFrame then self.radialFrame:Hide() end
   end

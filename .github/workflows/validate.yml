@@ -21,15 +21,21 @@ jobs:
         run: |
           lua5.1 tests/safety_harness.lua
           lua5.1 tests/ui_harness.lua
+          lua5.1 tests/protected_actions_harness.lua
+          lua5.1 tests/integration_harness.lua
 
       - name: Check bindings XML
         run: xmllint --noout Bindings.xml
 
       - name: Check safety invariants
         run: |
-          test "$(grep -Ec '^[[:space:]]*SaveBindings\(' Bindings.lua)" -eq 1
+          test "$(grep -Ec '^[[:space:]]*SaveBindings\(' Bindings.lua)" -eq 0
+          test "$(grep -Ec '^[[:space:]]*SetBinding\(' Bindings.lua)" -eq 0
+          grep -q 'function OctoPort:SaveBindingsSafely' Bindings.lua
+          grep -q 'function OctoPort:SetBindingSafely' Bindings.lua
           grep -q 'function OctoPort:RecoverLegacyBindings' Bindings.lua
           grep -q 'RegisterEvent("PLAYER_LOGOUT")' Core.lua
+          grep -q 'RegisterEvent("PLAYER_REGEN_ENABLED")' Core.lua
           ! grep -REn 'ActionButton_GetPagedID[[:space:]]*=' --include='*.lua' .
           ! grep -REn 'UIParent_ManageFramePositions[[:space:]]*=' --include='*.lua' .
           ! grep -REn 'SetParent\(' UI.lua
@@ -41,6 +47,8 @@ jobs:
           ! grep -q 'OCTOPORT_MOVE_' Bindings.xml
           ! grep -REn '(MoveForward|MoveBackward|StrafeLeft|StrafeRight)(Start|Stop)\(' --include='*.lua' .
           ! grep -REn '(UseAction|TurnOrActionStart|TurnOrActionStop|Jump|ToggleAutoRun)\(' --include='*.lua' Bindings.lua UI.lua
+          ! grep -REn 'TargetNearest(Friend|Enemy)\(' --include='*.lua' Bindings.lua
+          ! grep -REn 'string\.(match|gmatch)\(' --include='*.lua' Core.lua Bindings.lua UI.lua Radial.lua Quest.lua Loot.lua Menu.lua
 
       - name: Check OctoLauncher layout
         run: |

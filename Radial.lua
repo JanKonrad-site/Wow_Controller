@@ -16,6 +16,21 @@ local radialPositions = {
 local radialActions = {}
 local radialActionOrder = {}
 
+-- OctoWoW backports the protected-action lockdown used by newer clients, but
+-- not every 1.12-derived client exposes InCombatLockdown. Check both APIs so
+-- Lua handlers never attempt a protected action while the player is fighting.
+function OctoPort:IsProtectedActionLocked()
+  if InCombatLockdown and InCombatLockdown() then return true end
+  if UnitAffectingCombat and UnitAffectingCombat("player") then return true end
+  return false
+end
+
+function OctoPort:CanRunProtectedAction(label)
+  if not self:IsProtectedActionLocked() then return true end
+  self:Print((label or "Tato akce") .. " je behem boje zablokovana. Zkus ji po skonceni boje.")
+  return false
+end
+
 local function AddRadialAction(id, label, icon, handler)
   radialActions[id] = { id = id, label = label, icon = icon, handler = handler }
   table.insert(radialActionOrder, id)
@@ -62,7 +77,13 @@ local function ToggleHelp()
 end
 
 local function ToggleRun()
+  if not OctoPort:CanRunProtectedAction("Auto beh") then return false end
+  if not ToggleAutoRun then
+    OctoPort:Print("Auto beh neni v tomto klientu dostupny.")
+    return false
+  end
   ToggleAutoRun()
+  return true
 end
 
 local function ToggleMenu()
@@ -76,10 +97,12 @@ local function ItemNameFromLink(link)
 end
 
 local function UsePreferredMount()
+  if not OctoPort:CanRunProtectedAction("Mount") then return false end
+
   local wanted = OctoPort.config and OctoPort.config.mountName or ""
   if wanted == "" then
     OctoPort:Print("Set a mount first: /octoport mount NAME")
-    return
+    return false
   end
 
   local wantedLower = string.lower(wanted)
@@ -88,8 +111,12 @@ local function UsePreferredMount()
     local spellName = GetSpellName(spellIndex, BOOKTYPE_SPELL)
     if not spellName then break end
     if string.find(string.lower(spellName), wantedLower, 1, true) then
-      CastSpell(spellIndex, BOOKTYPE_SPELL)
-      return
+      if CastSpell then
+        CastSpell(spellIndex, BOOKTYPE_SPELL)
+        return true
+      end
+      OctoPort:Print("Sesilani mountu neni v tomto klientu dostupne.")
+      return false
     end
     spellIndex = spellIndex + 1
   end
@@ -99,13 +126,18 @@ local function UsePreferredMount()
     for slot = 1, slots do
       local itemName = ItemNameFromLink(GetContainerItemLink(bag, slot))
       if itemName and string.find(string.lower(itemName), wantedLower, 1, true) then
-        UseContainerItem(bag, slot)
-        return
+        if UseContainerItem then
+          UseContainerItem(bag, slot)
+          return true
+        end
+        OctoPort:Print("Pouziti mountu z batohu neni v tomto klientu dostupne.")
+        return false
       end
     end
   end
 
   OctoPort:Print("Mount not found in the spellbook or bags: " .. wanted)
+  return false
 end
 
 AddRadialAction("map",       "MAPA",       "Interface\\Icons\\INV_Misc_Map_01", ToggleMap)
@@ -137,10 +169,14 @@ local function IsClickable(button)
   return true
 end
 
-local function ClickFirstVisible(names)
+local function ClickFirstVisible(names, label)
   for index = 1, table.getn(names) do
     local button = _G[names[index]]
     if IsClickable(button) then
+      -- A visible Blizzard button may dispatch a protected quest, gossip or
+      -- popup handler. Treat the synthetic click like the direct protected
+      -- calls above instead of relying on the button's implementation.
+      if not OctoPort:CanRunProtectedAction(label or "Ovládání dialogu") then return true end
       button:Click()
       return true
     end
@@ -162,7 +198,7 @@ function OctoPort:ConfirmVisibleUI()
     "QuestFrameCompleteButton",
     "QuestFrameCompleteQuestButton",
     "GossipTitleButton1",
-  })
+  }, "Potvrzeni dialogu")
 end
 
 function OctoPort:CancelVisibleUI()
@@ -180,7 +216,7 @@ function OctoPort:CancelVisibleUI()
     "StaticPopup1Button2",
     "QuestFrameDeclineButton",
     "QuestFrameGoodbyeButton",
-  }) then
+  }, "Zavreni dialogu") then
     return true
   end
 
@@ -472,9 +508,21 @@ function OctoPort:HideRadial()
   if self.radialFrame then self.radialFrame:Hide() end
   self.radialEditor = false
   self:SetRadialSelection(nil)
-  if self.config and self.config.enabled and not self.bindingCaptureActive and self.ActivateSessionBindings then
-    self:ActivateSessionBindings()
+  -- ShowRadial installs the same temporary ABXY/D-pad navigation layer used
+  -- by Settings. Always remove that layer on every close path, including when
+  -- the controller runtime is OFF; otherwise those temporary commands leak
+  -- into normal gameplay until a reload.
+  if self.DeactivateConfigNavigationBindings then
+    local restored, reason = self:DeactivateConfigNavigationBindings()
+    if not restored then return restored, reason end
   end
+  -- If gameplay was active below the modal, removing the nested navigation
+  -- layer already exposed it again. Only rebuild a genuinely missing session.
+  if self.config and self.config.enabled and not self.bindingCaptureActive and
+     not self.sessionBindingsActive and self.ActivateSessionBindings then
+    return self:ActivateSessionBindings()
+  end
+  return true
 end
 
 function OctoPort:ToggleRadialEditor()

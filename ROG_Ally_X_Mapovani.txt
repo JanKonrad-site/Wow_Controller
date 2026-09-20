@@ -1,4 +1,4 @@
-WOW CONTROLLER 0.9.0 - ROG ALLY X / ARMOURY CRATE SE
+WOW CONTROLLER 0.9.1 - ROG ALLY X / ARMOURY CRATE SE
 ================================================
 
 RYCHLY START
@@ -7,10 +7,13 @@ RYCHLY START
 2. V Command Centeru nastav CONTROL MODE = DESKTOP (ne Auto ani Gamepad).
 3. Po aktualizaci z 0.1-0.4 addon jednou opravi stare ulozene bindy a zustane OFF.
 4. Klikni levym tlacitkem na tyrkysovou ikonku WC u minimapy. Neni treba psat /wc.
-5. V RAW TESTU musi leva packa ukazat W/S/A/D a D-pad ctyri jine signaly.
-6. Pravym klikem na WC otevri nastaveni a zvol profil nebo pruvodce.
-7. LT a RT jsou povinne: nastav LT=Shift a RT=Ctrl. LB/RB, L3/R3, View a M1/M2 jsou volitelne.
-8. Zvol ZAPNOUT BEZPECNE a v DIAGNOSTICE over vsechny vstupy.
+5. Pravym klikem na WC otevri Setup a zvol KALIBROVAT 8 SMERU.
+6. Kazdy pozadovany smer stiskni a pak uplne uvolni. Profil se ulozi az po osmem jedinecnem signalu.
+7. Pokud pruvodce ukaze KOLIZE, oba fyzicke ovladace vysilaji stejnou klavesu a je nutne jeden vystup zmenit v Armoury Crate.
+8. Zvol NACIST ABXY 1-4, zachyt fyzicka A/B/X/Y a potom ZAPNOUT BEZPECNE.
+9. LT a RT jsou povinne: nastav LT=Shift a RT=Ctrl. LB/RB, L3/R3, View a M1/M2 jsou volitelne.
+10. Kalibraci a zmenu bindu spoustej mimo boj. Pokud boj probiha, addon nic
+    chraneneho nezavola a zmenu bezpecne odlozi do jeho konce.
 
 PRIME OVLADANI BEZ PREPINANI REZIMU
 -----------------------------------
@@ -23,8 +26,11 @@ PRIME OVLADANI BEZ PREPINANI REZIMU
   vystup v Armoury Crate; addon stejny signal fyzicky rozdelit nemuze.
 - V Setupu zvol NACIST ABXY 1-4 a postupne stiskni fyzicke A, B, X, Y. I kdyz
   ted vysilaji Enter/Escape, za aktivni relace budou ovladat akce 1/2/3/4.
-- KALIBROVAT 8 SMERU nacte packu a D-pad oddelene. Pokud libovolne dva smery
-  vysilaji stejnou klavesu, addon se nezapne a zadne castecne bindy nezustanou.
+- KALIBROVAT 8 SMERU nacte packu a D-pad oddelene. Puvodni profil zustane
+  beze zmeny, dokud neni zachyceno vsech osm ruznych signalu. Drzeny smer se
+  neposune do dalsiho kroku; nejdrive jej uvolni.
+- Nastaveni lze ovladat D-padem a A/B i kdyz je herni profil vypnuty nebo
+  neplatny. Po zavreni se puvodni WoW bindy presne vrati.
 
 Klient WoW 1.12 neumi XInput, proto Gamepad Mode nefunguje. Leva packa vysila
 W/A/S/D a addon je po dobu aktivni relace navaze primo na nativni pohybove
@@ -77,10 +83,14 @@ Drz RT             A/B/X/Y + D-pad 4 smery        8 akci
 Celkem                                               20 akci
 
 V zalozce HRANI vyber UPRAVIT 20 AKCI. Do vlastniho HUDu pretahni schopnosti
-nebo predmety mysi; pravym klikem lze akci ze slotu zvednout. Bez triggeru
+nebo predmety mysi; editor funguje i pri vypnutem hernim profilu a zavira se
+tlacitkem HOTOVO. Pravym klikem lze akci ze slotu zvednout. Bez triggeru
 D-pad vzdy prepina cile. Teprve pri drzeni LT/RT se D-pad prepne na akce.
+Zakladni W/A/S/D zustava nativni pohyb i pri drzeni LT/RT. Addon po dobu relace
+uvolni SHIFT/CTRL kombinace s W/A/S/D, aby Vanilla nevyhodila zakladni pohybovy
+bind kvuli limitu dvou klaves na prikaz; pri vypnuti je presne vrati.
 
-Pouzij tlacitko ROG ALLY PROFIL nebo prikaz /octoport preset. Profil vcetne
+Pouzij tlacitko VYCHOZI PROFIL nebo prikaz /octoport preset. Profil vcetne
 ctyr smeru leve packy se aktivuje jen pro aktualni relaci a pri vypnuti nebo
 odhlaseni vrati puvodni bindy.
 
@@ -101,6 +111,12 @@ Podrzenim Menu se otevre radialni kolo; smer vyber pravou packou nebo D-padem.
 Leva packa ovlada nativni pohyb. Controller menu a radial se ovladaji D-padem.
 Stary stredovy zamerovac se nenacita. Akce M1/M2 zmenis v
 zalozce HRANI.
+
+Pokud se uprostred boje pokusis zapnout/vypnout ovladac, obnovit bindy nebo
+spustit kalibraci, UI ukaze CEKA NA KONEC BOJE. Addon v tu chvili nevola
+SetBinding; pozadovany stav dokonci automaticky po boji.
+Pokud v boji udelas /reload, ulozeny recovery snapshot se obnovi jako prvni po
+nacteni. Addon zustane OFF, dokud nemuze bezpecne vratit presne puvodni bindy.
 
 BEZPECNOST HESLA
 ----------------
