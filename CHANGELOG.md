@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.0
+
+- Removed the custom controller HUD, minimap button, setup UI, calibration, radial menu, target layer, action editor, loot tracking and quest automation.
+- Removed every normal-play binding mutation and all controller action handlers. The addon no longer interprets or routes controller input.
+- Replaced layered controls with a direct native layout: A/X/Y/B = action slots 1-4, D-pad = 5-8, LT/RT = 9/10, R3/L3 = 11/12.
+- Documented that action slots 10-12 use the keyboard keys `0`, `-`, `=`.
+- Moved stick/D-pad separation entirely to Armoury Crate or another external mapper: stick W/S/A/D, D-pad 5/6/7/8.
+- Added a one-way cleanup bridge that restores a valid v0.9 recovery snapshot before removing persistent legacy `OCTOPORT_*` bindings.
+- Cleanup is blocked during combat, preserves failed/corrupt recovery evidence, saves only when old persistent bindings actually exist, and becomes inert after success.
+- Added a minimal-runtime harness covering fresh installs, repeat logins, combat deferral, exact recovery, legacy migration, failed writes and direct native-key pass-through.
+
 ## 0.9.1
 
 - Replaced destructive per-step direction remapping with an atomic eight-input calibration that commits only after all physical signals are unique.

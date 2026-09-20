@@ -1,50 +1,29 @@
 <Bindings>
-  <Binding name="OCTOPORT_ACTION_A" runOnUp="true" header="OCTOPORT">
-    OctoPort_ActionKey(1, keystate)
-  </Binding>
-  <Binding name="OCTOPORT_ACTION_B" runOnUp="true">
-    OctoPort_ActionKey(2, keystate)
-  </Binding>
-  <Binding name="OCTOPORT_ACTION_X" runOnUp="true">
-    OctoPort_ActionKey(3, keystate)
-  </Binding>
-  <Binding name="OCTOPORT_ACTION_Y" runOnUp="true">
-    OctoPort_ActionKey(4, keystate)
-  </Binding>
-  <Binding name="OCTOPORT_RADIAL" runOnUp="true">
-    OctoPort_RadialKey(keystate)
-  </Binding>
-  <Binding name="OCTOPORT_TARGET_UP">
-    OctoPort_Target("up")
-  </Binding>
-  <Binding name="OCTOPORT_TARGET_DOWN">
-    OctoPort_Target("down")
-  </Binding>
-  <Binding name="OCTOPORT_TARGET_LEFT">
-    OctoPort_Target("left")
-  </Binding>
-  <Binding name="OCTOPORT_TARGET_RIGHT">
-    OctoPort_Target("right")
-  </Binding>
-  <Binding name="OCTOPORT_LAYER_LT" runOnUp="true">
-    OctoPort_LayerKey("lt", keystate)
-  </Binding>
-  <Binding name="OCTOPORT_LAYER_RT" runOnUp="true">
-    OctoPort_LayerKey("rt", keystate)
-  </Binding>
-  <Binding name="OCTOPORT_OPENCONFIG">
-    OctoPort_OpenConfig()
-  </Binding>
-  <Binding name="OCTOPORT_REAR_M1" runOnUp="true">
-    OctoPort_RearKey("M1", keystate)
-  </Binding>
-  <Binding name="OCTOPORT_REAR_M2" runOnUp="true">
-    OctoPort_RearKey("M2", keystate)
-  </Binding>
-  <Binding name="OCTOPORT_TOGGLEBAGS">
-    OctoPort_ToggleBags()
-  </Binding>
-  <Binding name="OCTOPORT_TOGGLEHELP">
-    OctoPort_ToggleHelp()
-  </Binding>
+  <!--
+    Inert bridge definitions for bindings saved by WOW Controller 0.x.
+    Cleanup.lua removes them once and persists the repaired binding set. No
+    entry performs movement, targeting, action-bar or UI work.
+  -->
+  <Binding name="OCTOPORT_MOVE_FORWARD" header="OCTOPORT">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_MOVE_BACKWARD">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_MOVE_LEFT">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_MOVE_RIGHT">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_ACTION_A">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_ACTION_B">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_ACTION_X">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_ACTION_Y">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_RADIAL">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_TARGET_UP">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_TARGET_DOWN">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_TARGET_LEFT">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_TARGET_RIGHT">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_LAYER_LB">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_LAYER_LT">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_LAYER_RT">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_OPENCONFIG">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_TOGGLEMODE">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_REAR_M1">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_REAR_M2">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_TOGGLEBAGS">OctoPort_LegacyNoop()</Binding>
+  <Binding name="OCTOPORT_TOGGLEHELP">OctoPort_LegacyNoop()</Binding>
 </Bindings>

@@ -1,131 +1,103 @@
-# WOW Controller
+# WOW Controller — native profile
 
-Controller-first UI for **OctoWoW / World of Warcraft 1.12.2**, designed for the **ROG Ally X** and other keyboard/mouse-emulating controllers. Version 0.9.1 fixes live input setup: the left stick and D-pad are captured as eight physical signals in one atomic calibration, settings remain controller-operable while gameplay is off, and the 20-slot editor works independently of controller activation.
+Version **1.0.0** is an intentionally minimal controller setup for OctoWoW / World of Warcraft 1.12.x. It removes the custom HUD, minimap icon, setup window, radial menu, targeting layer, quest automation and all runtime key remapping.
 
-OctoWoW's 1.12 client has no native XInput support. Armoury Crate SE or Steam Input must convert the physical controller to keyboard/mouse signals. The addon binds the four left-stick signals directly to Blizzard's native movement commands; it never calls protected movement functions from Lua. LT and RT emit real Shift/Ctrl modifiers, following the layered-key principle used by ConsoleExperienceClassic. WOW Controller keeps every binding temporary and reversible.
+The controller now talks directly to Blizzard's normal movement and action-bar bindings. After a one-time safe cleanup of data left by older releases, the addon is passive: it creates no visible UI and does not intercept controller input.
 
-## Safety model
+## Why this design
 
-- A fresh installation is **OFF** and does not alter Blizzard UI, quests, targets or bindings.
-- Updating from 0.1-0.4 removes persisted `OCTOPORT_*` commands and restores the pre-addon bindings captured by those releases.
-- Setup stores chosen keys only in `OctoPortConfig`; it does not call `SaveBindings`.
-- Enabling the controller applies temporary bindings. Disabling it or logging out restores the exact previous actions, including both original keys of a Blizzard command. A recovery baseline is also stored before each temporary change, so it survives `/reload` and is cleared only after exact restoration.
-- Binding changes are never attempted during combat lockdown. The requested state is shown as pending and is reconciled automatically after combat.
-- All 20 combat inputs bind to Blizzard's native `ACTIONBUTTON` / `MULTIACTIONBAR` commands. The addon never calls `UseAction` for normal controller combat.
-- The HUD mirrors action slots in addon-owned frames. It never reparents Blizzard action buttons and never replaces `ActionButton_GetPagedID` or `UIParent_ManageFramePositions`.
-- `/octoport restore` is an explicit emergency cleanup and turns the addon OFF.
+The Vanilla 1.12 client has no native XInput API. An addon receives only the keyboard or mouse signal produced by Armoury Crate, Steam Input or another mapper. If the left stick and D-pad both emit the same arrow key, Lua cannot determine which physical control produced it. Holding LT appears different only because the mapper adds a modifier to the same base key.
 
-There is no combat rotation, botting, injected DLL or unattended combat. Every combat action still requires a physical button press. Optional quest acceptance only acts after the normal quest detail panel is already open.
+Current ConsolePort can read controllers through modern WoW's `C_GamePad` API, which does not exist in 1.12. ConsoleExperienceClassic likewise relies on external keyboard/mouse mapping. For OctoWoW, distinct device-side keys are therefore the reliable solution.
 
-## Install or update with OctoLauncher
+## ROG Ally / Armoury Crate profile
 
-1. Open **OctoLauncher** and choose **Addons**.
-2. Add the custom git addon `https://github.com/JanKonrad-site/Wow_Controller.git`.
-3. Install or update it, then launch OctoWoW.
-4. In ROG Command Center select **Desktop Mode** for OctoWoW. Do not leave it on Auto/Gamepad Mode.
-5. On the first 0.5 launch, the addon repairs older saved bindings and remains OFF.
-6. Left-click the cyan **WC** button beside the minimap and test the physical controls. Right-click it to open Setup; typing `/wc` is no longer necessary.
-7. Choose **KALIBROVAT 8 SMERU** and release each requested direction before the next step. The addon enables gameplay only after it has actually observed eight unique signals.
-8. Use **NACIST ABXY 1-4** if the physical face buttons currently emit Enter, Escape or other keys, then press **ZAPNOUT BEZPECNE**.
+Use a per-game **Desktop Mode** profile attached to the actual WoW executable launched by OctoLauncher.
 
-The repository name must remain `Wow_Controller`: OctoLauncher clones it directly to `Interface/AddOns/Wow_Controller` and expects `Wow_Controller.toc` in the repository root.
+| Physical control | Keyboard output | WoW result |
+|---|---:|---|
+| Left stick up | `W` | Move forward |
+| Left stick down | `S` | Move backward |
+| Left stick left | `A` | Strafe left after the one-time WoW setting below |
+| Left stick right | `D` | Strafe right after the one-time WoW setting below |
+| A | `1` | Action button 1 |
+| X | `2` | Action button 2 |
+| Y | `3` | Action button 3 |
+| B | `4` | Action button 4 |
+| D-pad Right | `5` | Action button 5 |
+| D-pad Left | `6` | Action button 6 |
+| D-pad Up | `7` | Action button 7 |
+| D-pad Down | `8` | Action button 8 |
+| LT | `9` | Action button 9 |
+| RT | `0` | Action button 10 |
+| Right stick click (R3) | `-` | Action button 11 |
+| Left stick click (L3) | `=` | Action button 12 |
+| Right stick | Mouse | Camera / cursor |
 
-## First controller setup
+Useful optional controls are LB = left mouse click, RB = right mouse click,
+Menu = `Escape`, View = `M`, M1 = `Space` (jump), and M2 = `Tab` (next enemy).
+M1/M2 must first be made standalone in Armoury Crate instead of acting as
+secondary-function modifiers.
 
-The wizard captures all four left-stick directions, A/B/X/Y, all four D-pad directions, Menu, LT and RT. LT and RT are required and must emit two different native modifiers chosen from Shift, Ctrl and Alt. LB/RB, L3/R3, View and rear M1/M2 are optional. Enter, Escape, arrows, F-keys, ordinary keys and mouse buttons are supported.
+Slots 10–12 use the keyboard keys `0`, `-` and `=`. Do not enter literal multi-character keys `10`, `11` or `12`, and do not use the numpad variants.
 
-Direction calibration is transactional. It first stages all eight real inputs, waits for every direction to be released, rejects a duplicate signal, and commits the new map only after the last valid direction. Cancelling leaves the previous map untouched. A preset is only an expected layout and no longer counts as proof that the physical stick and D-pad are separate. Start calibration outside combat; protected binding changes are deferred until combat ends instead of triggering a Blizzard UI blocked-action warning.
+LT and RT are ordinary actions in this profile, not modifiers. D-pad directions are ordinary action slots 5–8, not targeting commands.
 
-The minimap **WC** button remains visible even while the controller session is off. Left-click opens **RAW TEST**, which displays exactly what WoW receives before the addon binds anything, including `ESCAPE`; right-click opens Setup. Move the left stick first: it should report `W`, `S`, `A`, `D`. If it reports arrow keys, the Armoury Crate profile—not Lua—is routing the stick to the D-pad targeting signals. Right-stick movement is reported as `MOUSE MOVE`.
+### Strafe on A/D
 
-If at least one physical button reaches the raw test, press it and choose **VSTUP = MENU**. WOW Controller enables a menu-only session and binds only that one key; movement and face-button bindings remain untouched.
+Vanilla normally turns with A/D and strafes with Q/E. To keep the requested W/S/A/D stick layout, open Blizzard's normal **Key Bindings → Movement Keys** once and set:
 
-The left stick and D-pad must emit eight distinct signals. A common mapping is stick `W/A/S/D` and D-pad arrow keys; ConsoleExperienceClassic-style `5/6/7/8` D-pad signals work as well. Version 0.9.1 verifies the signals through live capture and refuses to enable a partial or duplicate profile. One keyboard signal cannot identify whether it came from the physical stick or D-pad.
+- Move Forward = `W`
+- Move Backward = `S`
+- Strafe Left = `A`
+- Strafe Right = `D`
+- clear A/D from Turn Left and Turn Right
 
-If the wizard does not advance when you press a control, that button is not sending a keyboard/mouse signal to WoW. Assign any unused key to it in the game's Armoury Crate Desktop Mode profile, return to WoW and press it again. For mouse-button capture, point the cursor at the capture window. Auto mode can select Gamepad Mode, which the old 1.12 client cannot consume as XInput.
+If you do not want to change WoW bindings, map stick-left/stick-right to `Q`/`E` in Armoury Crate instead.
 
-For M1/M2, clear **Set as Secondary Function** in Armoury Crate before assigning an unused keyboard key to each paddle. Confirm those keys in RAW TEST before binding them—the addon cannot detect a paddle that emits no keyboard or mouse event. The physical Command Center and Armoury Crate buttons are system-reserved and cannot be remapped; use View for WOW Controller settings instead.
+## Install / update
 
-Recommended device-side controls that do not need the wizard:
+1. Install or update `https://github.com/JanKonrad-site/Wow_Controller.git` through OctoLauncher.
+2. Start the game and log into a character **outside combat once**. Version 1.0 restores any exact recovery snapshot from v0.9 and removes persistent `OCTOPORT_*` bindings from older releases.
+3. Completely restart WoW.
+4. Configure the Armoury profile using the table above.
+5. In Blizzard's normal Key Bindings, verify Action Button 1–12 use `1 2 3 4 5 6 7 8 9 0 - =` and set A/D to strafe.
 
-| ROG Ally control | Armoury Crate output | Purpose |
-|---|---|---|
-| Left stick | W / A / S / D | Direct Blizzard movement bindings |
-| Right stick | Mouse | Camera, cursor and radial direction |
-| LT | Shift | Eight-action LT layer |
-| RT | Ctrl | Eight-action RT layer |
-| LB | Left mouse button | UI click (device-side) |
-| RB | Right mouse button | Camera and world interaction (device-side) |
-| L3 | Num Lock | Auto run |
-| R3 | Space | Jump |
-| Menu | F8 | Radial wheel / game menu |
-| View | Any unused key | WOW Controller settings |
-| M1 | Any unused key | Configurable; default settings |
-| M2 | Any unused key | Configurable; default interact |
+After the migration marker is written, later logins call neither `SetBinding` nor `SaveBindings`. The addon contains no enable mode, controller HUD or setup menu.
 
-The **NACIST ABXY 1-4** Setup button asks for physical A, B, X and Y in sequence, then routes whatever they actually emit to Blizzard's native action slots 1, 2, 3 and 4. This also works when Desktop Mode currently emits Enter or Escape. The original Enter/Escape actions are restored when the controller session is disabled or the player logs out.
+## Test before launching WoW
 
-The fixed profile—stick W/A/S/D, ABXY 1-4, D-pad arrows, LT Shift, RT Ctrl, Menu F8, View F7 and rear F6/F5—is available through **VYCHOZI PROFIL** or `/octoport preset`. It requires matching Armoury Crate output. All bindings remain temporary.
+Open Notepad with the same Armoury per-game profile active:
 
-## Controller menu
+- moving the left stick should type `W/S/A/D`;
+- pressing the D-pad should type `5/6/7/8`;
+- A/X/Y/B should type `1/2/3/4`.
 
-Open it by right-clicking the persistent **WC** minimap button, with `/wc`, `/octoport`, or with the smaller WC button on the controller HUD. Left-clicking the minimap button opens raw input testing.
+If stick and D-pad still type the same characters, the correct Armoury profile is not active or is attached only to OctoLauncher rather than the actual game executable. No 1.12 addon can split an identical incoming key afterward.
 
-- **SETUP** — full wizard, safe ROG Ally profile, enable/disable and emergency restore.
-- **OVLADANI** — view or remap every controller action separately; old assignments may now be swapped instead of blocking capture.
-- **HRANI** — auto target, auto quest, configurable M1/M2 actions, 20-slot HUD editor and radial settings.
-- **DIAGNOSTIKA** — all controller inputs, native/pass-through state and explicit system-only ASUS buttons; **RAW TEST** displays actual incoming keys and mouse signals.
+Here “right/left stick click” means R3/L3. If “kloboucek” was meant as RB/LB
+instead, assign `-` and `=` to those two physical buttons; WoW only cares about
+the resulting keys.
 
-Settings use their own temporary navigation bindings, so D-pad and A/B remain usable even when the gameplay profile is off or has failed validation. Closing Settings restores the exact previous bindings.
+## Safety bridge
 
-Inside the menu, D-pad left/right changes tabs and up/down moves focus. Use A or LB/left click to activate the highlighted control; B or View closes the menu.
+`Cleanup.lua` exists only for upgrading from old WOW Controller versions. It:
 
-## Default behavior
+- restores a valid `bindingRecoverySnapshot` before doing anything else;
+- never mutates bindings in combat and retries after combat;
+- preserves corrupt or failed recovery evidence instead of discarding it;
+- removes historical `OCTOPORT_*` bindings and saves only when persistent legacy cleanup is actually required;
+- becomes completely inert after `basicMigrationVersion = 1` succeeds.
 
-- D-pad Up/Down cycles friendly targets and Left/Right cycles enemy targets through Blizzard's native target commands. The HUD mirrors the resulting friendly/enemy target change; holding LT or RT temporarily changes all four D-pad directions into action inputs.
-- Left stick drives Blizzard's native forward/backward/strafe binding commands. Its four emitted keys are active only during the controller session and are restored exactly when the addon is disabled or the player logs out.
-- D-pad controls Controller settings and cardinal radial selection; movement keys remain owned by Blizzard UI to avoid protected-action blocking.
-- A/B/X/Y use Blizzard's native action slots 1/2/3/4 through the physical signals captured by Setup.
-- LT + ABXY/D-pad uses action slots 61-68; RT + ABXY/D-pad uses slots 49-56. Movement stays on the four base W/A/S/D bindings while either trigger is held. During the session, conflicting SHIFT/CTRL movement chords are cleared so they fall through to W/A/S/D, then restored exactly on disable; the addon never creates third movement aliases that could evict the base keys under Vanilla's two-key-per-command limit.
-- Choose **UPRAVIT 20 AKCI** and drag spells or items directly onto the addon's 4 + 8 + 8 slot HUD. The editor is visible and clickable even while controller gameplay is off. Right-click a slot to pick its action up and use **HOTOVO** to close the editor.
-- Tap Menu for the game menu. Hold Menu for the eight-slot radial utility wheel.
-- In the radial wheel, aim with the mouse/right stick or select cardinal slots with D-pad; releasing Menu activates the selected utility.
-- The default wheel contains Map, Quests, Bags, Character, Mount, Chat, Combat Log and Spellbook. Its eight positions are editable.
-- Combat actions are never intercepted by Lua. Use D-pad Right for the next enemy or D-pad Left for the previous enemy.
-- Auto quest accepts an already displayed quest. Hold LT while the quest opens to read it first.
+`Bindings.xml` contains inert legacy command names for this bridge release so even old saved bindings remain discoverable and removable. Every handler is a no-op.
 
-## Commands
+## Compatibility references
 
-- `/wc`, `/octoport` or `/op` — open Controller settings.
-- `/octoport setup` — start the binding wizard.
-- `/octoport test` — open raw keyboard/mouse input testing.
-- `/octoport preset` — select the session-only universal keyboard/mouse profile.
-- `/octoport diagnostics` — open live input testing.
-- `/octoport restore` — remove saved `OCTOPORT_*` bindings, restore captured actions and turn the addon off.
-- `/octoport edit` — show or hide all 20 editable action slots.
-- `/octoport move` — unlock or lock the HUD.
-- `/octoport scale 0.7-1.6` — resize the HUD.
-- `/octoport wheel` — edit the radial menu.
-- `/octoport quest on|off` — toggle quest acceptance.
-- `/octoport mount NAME` — set the radial mount spell or bag item.
+- [Vanilla FrameXML action-button bindings](https://github.com/satan666/WOW-UI-SOURCE/blob/8033710451d7fba6615fb5e9a4e596e976b46fb8/FrameXML/Bindings.xml#L121-L205)
+- [ConsoleExperienceClassic key mapping](https://github.com/pepordev/ConsoleExperienceClassic/blob/main/docs/Keybindings.md)
+- [ConsolePort gamepad model using modern `C_GamePad`](https://github.com/seblindfors/ConsolePort/blob/master/ConsolePort/Model/Gamepad/Gamepad.lua)
+- [ASUS ROG Ally button remapping and per-game profiles](https://rog.asus.com/articles/guides/how-to-remap-buttons-and-create-custom-game-profiles-on-the-rog-ally/)
 
-## Login credentials
-
-WOW Controller never reads or stores a game password. WoW addons load after account login and cannot safely prefill the login screen. A password in Lua or SavedVariables would be plaintext and could be copied or accidentally committed. Credential autofill belongs in a launcher/password manager backed by the operating system credential vault, not in this addon.
-
-## Compatibility and releases
-
-- Target: OctoWoW / Vanilla client 1.12.x (`## Interface: 11200`).
-- Default Blizzard action bars are mirrored without changing their parent, scripts or tooltip behavior.
-- The current ConsolePort repository cannot be installed as a working OctoWoW addon: its current TOC targets modern clients and even its `legacy` branch targets interface `90000`, while OctoWoW requires `11200`. The repository is also a multi-addon package whose TOCs live in subdirectories, not the single-addon root layout expected by this OctoLauncher entry.
-- [TurtleController](https://github.com/sigboe/TurtleController) and [ShaguController](https://github.com/shagu/ShaguController) are genuine 1.12 projects and useful compatibility references, but they are not ConsolePort feature-for-feature ports.
-- The addon lives in the repository root for OctoLauncher git installation.
-- Tags named `vX.Y.Z` produce a release ZIP containing one top-level `Wow_Controller` directory.
-
-## Credits and license
-
-The setup flow, unified binding view, controller navigation and radial utilities are inspired by controller-first UX popularized by [ConsolePort](https://github.com/seblindfors/ConsolePort). Direct source reuse will happen only where it is technically portable to 1.12 and compliant with ConsolePort's Artistic License 2.0; version 0.5 contains no ConsolePort source code or artwork.
-
-The feature-by-feature compatibility decisions are tracked in [ConsolePort parity plan](docs/CONSOLEPORT_PARITY.md).
+## License
 
 MIT — see [LICENSE](LICENSE).
