@@ -2,7 +2,7 @@
 ## Title: |cff3dd6d0WOW|cffffffff Controller
 ## Author: Jan Konrad / OpenAI
 ## Notes: Native keyboard pass-through profile and safe legacy binding cleanup
-## Version: 1.0.0
+## Version: 1.0.1
 ## SavedVariablesPerCharacter: OctoPortConfig
 
 Cleanup.lua

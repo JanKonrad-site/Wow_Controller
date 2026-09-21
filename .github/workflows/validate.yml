@@ -40,7 +40,7 @@ jobs:
       - name: Check OctoLauncher layout
         run: |
           test -f Wow_Controller.toc
-          grep -q '^## Version: 1.0.0$' Wow_Controller.toc
+          grep -q '^## Version: 1.0.1$' Wow_Controller.toc
           grep -q '^Cleanup.lua$' Wow_Controller.toc
           grep -q '^Core.lua$' Wow_Controller.toc
           ! grep -Eq '^(Bindings|UI|Menu|Radial|Quest|Loot)\.lua$' Wow_Controller.toc

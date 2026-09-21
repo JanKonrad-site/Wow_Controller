@@ -1,4 +1,4 @@
-WOW CONTROLLER 1.0.0 - BASIC / NATIVE PROFIL
+WOW CONTROLLER 1.0.1 - BASIC / NATIVE PROFIL
 ===========================================
 
 Addon uz nevytvari zadne UI, radial, zamerovac ani kalibraci a za hry
@@ -14,12 +14,12 @@ Leva packa vpravo       D        Ukrok vpravo (po nastaveni ve WoW)
 
 A                        1        Action Button 1
 X                        2        Action Button 2
-Y                        3        Action Button 3
-B                        4        Action Button 4
-D-pad vpravo             5        Action Button 5
-D-pad vlevo              6        Action Button 6
-D-pad nahoru             7        Action Button 7
-D-pad dolu               8        Action Button 8
+B                        3        Action Button 3
+Y                        4        Action Button 4
+D-pad nahoru             UP       Predchozi pratelsky cil
+D-pad dolu               DOWN     Dalsi / nejblizsi pratelsky cil
+D-pad vlevo              LEFT     Predchozi nepratelsky cil
+D-pad vpravo             RIGHT    Dalsi / nejblizsi nepratelsky cil
 LT                       9        Action Button 9
 RT                       0        Action Button 10
 Pravy kloboucek / R3     -        Action Button 11
@@ -52,6 +52,17 @@ Turn Right               bez D
 Pokud nechces menit WoW bindingy, dej v Armoury levou/pravou packu na Q/E;
 Vanilla ma Q/E pro ukroky uz standardne.
 
+JEDNORAZOVE NASTAVENI CILU VE WOW
+---------------------------------
+Esc -> Key Bindings -> Targeting Functions:
+
+Target Previous Friend   UP
+Target Nearest Friend    DOWN
+Target Previous Enemy    LEFT
+Target Nearest Enemy     RIGHT
+
+Jde o nativni Blizzard bindy. Addon pri hrani zadnou klavesu neprepisuje.
+
 JEDNORAZOVY UPDATE Z VERZE 0.x
 ------------------------------
 1. Aktualizuj addon v OctoLauncheru.
@@ -64,16 +75,40 @@ OCTOPORT_* bindingy. Potom je pasivni a uz nevola SetBinding ani SaveBindings.
 
 KDYZ PACKA A D-PAD DELAJI PORAD TO SAME
 --------------------------------------
-Otevri Poznamkovy blok a vyzkousej oba ovladace:
+Pokud A dela Enter a B dela Escape, je aktivni vychozi globalni Desktop Mode,
+ne upraveny profil OctoWoW. A/B addon neprepisuje.
 
-- leva packa musi psat W/S/A/D;
-- D-pad musi psat 5/6/7/8.
+1. Spust OctoWoW a ve Spravci uloh najdi skutecny bezici WoW.exe.
+2. Armoury Crate -> Game Library -> OctoWoW -> Game Options -> Game Info.
+3. Pridej skutecny WoW.exe jako Alternative path. Pokud dlazdice chybi, pridej
+   tento exe primo pres Add Game/App to Library.
+4. V Command Center nech Control Mode = AUTO. Rucne vynuceny Desktop/Gamepad
+   per-game profil docasne vypina.
+5. Uvnitro OctoWoW Game Profile zvol jako vychozi Desktop Mode a nastav tabulku.
+6. Ve hre podrz fyzicke tlacitko Armoury Crate. Overlay musi ukazat A/X/B/Y jako
+   1/2/3/4, ne Enter/Escape.
+
+Existujici herni profil neprebira pozdejsi zmeny globalniho mapovani. Uprav
+primo Game Profile pro spravny WoW.exe.
+
+S WoW v popredi podrz fyzicke tlacitko Armoury Crate a zkontroluj overlay:
+
+- leva packa musi ukazovat W/S/A/D;
+- D-pad musi ukazovat UP/DOWN/LEFT/RIGHT a nesmi ukazovat W/S/A/D;
+- A/X/B/Y musi ukazovat 1/2/3/4.
+
+Poznamkovy blok netestuje per-game Auto profil, protoze po prepnuti do nej se
+zmeni aplikace v popredi a Armoury prepne profil. Pouzij ho jen pokud stejne
+mapovani docasne nastavis do globalniho Desktop profilu.
 
 Pokud oba pisou stejne znaky, neni aktivni spravny per-game profil. Zkontroluj,
 ze je prirazen skutecnemu WoW executable spoustenemu OctoLauncherem, ne pouze
 samotnemu launcheru. Vanilla 1.12 ani addon nedokazou rozlisit dva fyzicke
 ovladace, ktere poslou naprosto stejny keycode. LT se jevi jinak jen proto, ze
 k zakladni klavese prida modifikator.
+
+Po odladeni lze profil zalohovat pres Select Template -> ozubene kolo -> Export.
+Import profilu sam o sobe nenahradi vazbu na spravny WoW.exe.
 
 M1 / M2
 -------
