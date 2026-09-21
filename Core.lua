@@ -1,10 +1,10 @@
--- WOW Controller 1.0.0
+-- WOW Controller 1.0.1
 --
 -- Native pass-through profile for OctoWoW / World of Warcraft 1.12.x.
 -- The addon deliberately creates no controller UI and owns no gameplay keys.
 
 OctoPort = OctoPort or {}
-OctoPort.version = "1.0.0"
+OctoPort.version = "1.0.1"
 
 function OctoPort:Print(message)
   if DEFAULT_CHAT_FRAME then

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.1
+
+- Corrected the requested face-button order to A/X/B/Y = action slots 1/2/3/4.
+- Replaced D-pad action slots with four distinct arrow-key signals routed through Blizzard's native previous/next friend and enemy targeting bindings.
+- Added an exact Armoury Crate activation check: A=Enter and B=Escape identify the factory Desktop fallback, while the active OctoWoW profile must display 1/2/3/4.
+- Documented binding the profile to the actual WoW executable, leaving Command Center in Auto, and keeping the per-game profile itself in Desktop Mode.
+- Extended the passive-runtime regression map to prove native movement, face actions and target bindings survive cleanup unchanged.
+
 ## 1.0.0
 
 - Removed the custom controller HUD, minimap button, setup UI, calibration, radial menu, target layer, action editor, loot tracking and quest automation.
